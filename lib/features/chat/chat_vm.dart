@@ -1,27 +1,32 @@
-import 'package:mobile_assistant/core/db/app_database.dart';
-import 'package:mobile_assistant/shared/models/chat_message.dart';
-import 'package:mobile_assistant/shared/models/chat_session.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:stacked/stacked.dart';
-import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart' hide ChatSession;
-import 'package:mobile_assistant/shared/models/task_item.dart';
-import 'package:mobile_assistant/shared/models/agent_action.dart';
-import 'package:mobile_assistant/core/services/action_dispatcher.dart';
-import 'package:mobile_assistant/core/agent/tools/memory_tool.dart';
-import 'package:mobile_assistant/core/services/ocr_service.dart';
+import 'dart:io';
 import 'package:flutter/material.dart' hide ActionDispatcher;
 import 'dart:math' as math;
-import 'dart:io';
+import 'package:mobile_assistant/core/db/app_database.dart';
+import 'package:mobile_assistant/shared/models/chat_session.dart';
+import 'package:mobile_assistant/shared/models/chat_message.dart';
+import 'package:mobile_assistant/shared/models/task_item.dart';
+import 'package:mobile_assistant/shared/models/agent_step.dart';
+import 'package:mobile_assistant/core/services/action_dispatcher.dart';
+import 'package:mobile_assistant/core/agent/tools/memory_tool.dart';
+import 'package:mobile_assistant/core/agent/tools/document_tool.dart';
+import 'package:google_generative_ai/google_generative_ai.dart' hide ChatSession;
+import 'package:google_generative_ai/google_generative_ai.dart' as gen_ai show ChatSession;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mobile_assistant/core/services/ocr_service.dart';
+import 'package:sqflite/sqflite.dart';
 
-class ChatVM extends BaseViewModel {
+class ChatVM extends ChangeNotifier {
   Database? db;
-  List<ChatMessage> messages = [];
   List<ChatSession> sessions = [];
   ChatSession? currentSession;
+  List<ChatMessage> messages = [];
 
   bool isGenerating = false;
+  String? modelError;
+  bool get hasError => modelError != null;
+
+  List<AgentStep> currentPlan = [];
+
   final TextEditingController messageController = TextEditingController();
 
   @override
@@ -34,14 +39,21 @@ class ChatVM extends BaseViewModel {
     db ??= await AppDatabase.instance.database;
   }
 
+  void setError(String err) {
+    modelError = err;
+    notifyListeners();
+  }
+
+  void clearErrors() {
+    modelError = null;
+    notifyListeners();
+  }
+
   Future<void> loadSessions() async {
     await loadDB();
     final result = await db!.query('chat_sessions', orderBy: 'createdAt DESC');
     sessions = result.map((e) => ChatSession.fromMap(e)).toList();
-    if (sessions.isNotEmpty && currentSession == null) {
-      currentSession = sessions.first;
-      await loadMessages();
-    } else if (sessions.isEmpty) {
+    if (currentSession == null) {
       await createNewSession();
     }
     notifyListeners();
@@ -58,11 +70,13 @@ class ChatVM extends BaseViewModel {
     sessions.insert(0, newSession);
     currentSession = newSession;
     messages.clear();
+    currentPlan.clear();
     notifyListeners();
   }
 
   Future<void> switchSession(ChatSession session) async {
     currentSession = session;
+    currentPlan.clear();
     await loadMessages();
   }
 
@@ -86,15 +100,24 @@ class ChatVM extends BaseViewModel {
     if (currentSession == null || currentSession!.title != 'New Chat') return;
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
-      if (apiKey == null || apiKey.isEmpty || apiKey == 'YOUR_API_KEY_HERE') return;
+      if (apiKey == null || apiKey.isEmpty) return;
+      final fallbackModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+      GenerateContentResponse? response;
       
-      final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
-        apiKey: apiKey,
-      );
-      final response = await model.generateContent([
-        Content.text("Generate a short, 2-4 word title for this chat based on the user's first message: '$firstMessage'. Only return the title, no quotes or extra text.")
-      ]);
+      for (final modelName in fallbackModels) {
+        try {
+          final model = GenerativeModel(model: modelName, apiKey: apiKey);
+          response = await model.generateContent([
+            Content.text("Generate a short, 2-4 word title for this chat based on the user's first message: '$firstMessage'. Only return the title.")
+          ]);
+          break;
+        } catch (e) {
+          debugPrint("Chat Title Model $modelName failed: $e");
+        }
+      }
+
+      if (response == null) return;
+      
       final title = response.text?.trim() ?? "New Chat";
       currentSession!.title = title;
       await db!.update('chat_sessions', currentSession!.toMap(), where: 'id = ?', whereArgs: [currentSession!.id]);
@@ -102,7 +125,7 @@ class ChatVM extends BaseViewModel {
       if (index != -1) sessions[index] = currentSession!;
       notifyListeners();
     } catch (e) {
-      // Ignore errors for title generation
+      // ignore
     }
   }
 
@@ -113,13 +136,8 @@ class ChatVM extends BaseViewModel {
   }) async {
     clearErrors();
     await loadDB();
-    if (content.trim().isEmpty) {
-      setError("Message cannot be empty");
-      return;
-    }
-    if (currentSession == null) {
-      await createNewSession();
-    }
+    if (content.trim().isEmpty) return;
+    if (currentSession == null) await createNewSession();
 
     ChatMessage message = ChatMessage(
       sessionId: currentSession!.id,
@@ -130,19 +148,89 @@ class ChatVM extends BaseViewModel {
     );
     
     if (isUser) pendingAttachmentPath = null;
+    currentPlan.clear();
 
     final id = await db!.insert('messages', message.toMap());
     message.id = id;
     messages.add(message);
     notifyListeners();
 
-    // If it's a user message, trigger the Assistant's response pipeline
     if (isUser) {
-      if (messages.length == 1 || (messages.isNotEmpty && currentSession!.title == 'New Chat')) {
+      if (messages.length == 1 || currentSession!.title == 'New Chat') {
         _generateChatTitle(content);
       }
       await _generateAssistantResponse();
     }
+  }
+
+  Tool _getAgentTools() {
+    return Tool(functionDeclarations: [
+      FunctionDeclaration(
+        'create_execution_plan',
+        'State a multi-step execution plan before executing complex requests',
+        Schema(SchemaType.object, properties: {
+          'steps': Schema(SchemaType.array, items: Schema(SchemaType.string)),
+        }, requiredProperties: ['steps']),
+      ),
+      FunctionDeclaration(
+        'create_task',
+        'Create a new task',
+        Schema(SchemaType.object, properties: {
+          'title': Schema(SchemaType.string),
+          'description': Schema(SchemaType.string),
+          'dueDate': Schema(SchemaType.string, description: 'ISO8601 string'),
+          'priority': Schema(SchemaType.string, description: 'low, medium, high'),
+        }, requiredProperties: ['title']),
+      ),
+      FunctionDeclaration(
+        'edit_task',
+        'Edit an existing task',
+        Schema(SchemaType.object, properties: {
+          'id': Schema(SchemaType.integer),
+          'title': Schema(SchemaType.string),
+          'dueDate': Schema(SchemaType.string),
+        }, requiredProperties: ['id']),
+      ),
+      FunctionDeclaration(
+        'delete_task',
+        'Delete a task',
+        Schema(SchemaType.object, properties: {'id': Schema(SchemaType.integer)}, requiredProperties: ['id']),
+      ),
+      FunctionDeclaration(
+        'remember_fact',
+        'Save a fact to long-term memory',
+        Schema(SchemaType.object, properties: {
+          'fact': Schema(SchemaType.string),
+          'importance': Schema(SchemaType.number),
+          'is_sensitive': Schema(SchemaType.boolean),
+        }, requiredProperties: ['fact']),
+      ),
+      FunctionDeclaration(
+        'create_document',
+        'Save a document',
+        Schema(SchemaType.object, properties: {
+          'title': Schema(SchemaType.string),
+          'content': Schema(SchemaType.string),
+          'folder': Schema(SchemaType.string),
+          'is_sensitive': Schema(SchemaType.boolean),
+        }, requiredProperties: ['title', 'content']),
+      ),
+      FunctionDeclaration(
+        'process_nlp',
+        'Process document with NLP',
+        Schema(SchemaType.object, properties: {
+          'id': Schema(SchemaType.integer),
+          'operation': Schema(SchemaType.string, description: 'summarize, translate, extract_entities, extract_keywords, generate_flashcards, generate_study_guide, extract_tasks'),
+        }, requiredProperties: ['id', 'operation']),
+      ),
+      FunctionDeclaration(
+        'ask_user',
+        'Ask the user a clarifying question to resolve a conflict or ambiguity',
+        Schema(SchemaType.object, properties: {
+          'question': Schema(SchemaType.string),
+        }, requiredProperties: ['question']),
+      )
+    ]);
   }
 
   Future<void> _generateAssistantResponse() async {
@@ -151,133 +239,138 @@ class ChatVM extends BaseViewModel {
 
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
-      if (apiKey == null || apiKey.isEmpty || apiKey == 'YOUR_API_KEY_HERE') {
-        setError("Please set your Gemini API Key in the .env file.");
-        notifyListeners();
+      if (apiKey == null || apiKey.isEmpty) {
+        setError("API Key not found.");
         return;
       }
 
       await loadDB();
       final tasksResult = await db!.query('tasks', where: 'completed = 0');
       final currentTasks = tasksResult.map((e) => TaskItem.fromMap(e)).toList();
-      final tasksContext = currentTasks.map((t) => "{id: ${t.id}, title: '${t.title}', dueDate: '${t.dueDate.toIso8601String()}', priority: '${t.priority.name}'}").join(", ");
+      final tasksContext = currentTasks.map((t) => "{id: ${t.id}, title: '${t.title}', priority: '${t.priority.name}', dueDate: '${t.dueDate.toIso8601String()}'}").join(",\n");
 
       final prompt = messages.last.content;
       final memoryTool = MemoryTool();
-      final memoryContext = await memoryTool.execute('search_memory', {'query': prompt});
+      final documentTool = DocumentTool();
+      
+      final memoryContext = await memoryTool.searchMemories(prompt);
+      final documentContext = await documentTool.searchDocumentsRAG(prompt);
+
+      final logsResult = await db!.query('interaction_logs', orderBy: 'timestamp DESC', limit: 5);
+      final recentLogs = logsResult.reversed.map((l) => "- Called ${l['executedAction']} during message '${l['userMessage']}'. Result: ${l['status']}").join('\n');
 
       final systemInstruction = '''
-You are a helpful assistant for a task management app with agentic capabilities. Extract the user's intent into a structured JSON array.
+You are a proactive local agent. Use the provided tools to fulfill requests.
 Current time: ${DateTime.now().toIso8601String()}
-Existing pending tasks: [$tasksContext]
-Relevant Memories: $memoryContext
+Pending tasks: [$tasksContext]
 
-# Task & Date Reasoning Rules
-- When the user uses a natural language date (e.g., "tomorrow", "next Friday", "in 3 weeks") to create or edit a task, you MUST calculate the exact date based on the 'Current time' and pass it strictly as an ISO8601 string in the parameters.
-- You have full access to the user's 'Existing pending tasks' including due dates and priorities. If the user asks "What should I work on first?" or "What's overdue?", analyze the tasks and reply intelligently using the 'core' tool 'other' action. Do not use get_overdue_tasks, just answer directly.
+Recent Actions Context (Use this to resolve "it" references):
+$recentLogs
 
-Return ONLY a valid JSON array of action objects matching this schema:
-[
-  {
-    "tool": "string (task_tool, memory_tool, document_tool, core)",
-    "action": "string (create_task, remember_fact, create_document, search_documents, read_document, other)",
-    "parameters": { ...key-value pairs depending on action... },
-    "reply": "string (optional, use this for natural language replies)"
-  }
-]
+Relevant Memories: 
+$memoryContext
 
-For 'task_tool':
-- 'create_task': 'title' (string), 'dueDate' (ISO8601 string), 'description' (string), 'priority' (low, medium, high)
-- 'edit_task': 'id' (integer), and fields to update
-- 'delete_task': 'id' (integer)
-- 'get_overdue_tasks' / 'get_workload'
+Relevant Documents:
+$documentContext
 
-For 'memory_tool':
-- 'remember_fact': 'fact' (string), 'importance' (float 0.0 to 1.0)
-- 'forget_fact': 'id' (integer)
-
-For 'document_tool':
-- 'create_document': 'title' (string), 'content' (markdown string), 'tags' (array of strings), 'folder' (string)
-- 'search_documents': 'keyword' (string)
-- 'read_document': 'id' (integer)
-
-For general chat or asking clarifying questions, use tool 'core', action 'other', and provide the 'reply' field.
-If you detect a user preference or fact, you can add a 'remember_fact' action silently alongside your reply.
+- For highly complex or multi-part requests, call the `create_execution_plan` tool FIRST to state your plan before executing the actual actions.
+- You may execute multiple tool calls simultaneously if the user asks you to perform multiple actions at once.
+- Proactively use the `remember_fact` tool to save any user preferences, long-term goals, or recurring interests you notice in the conversation. Ask first using `ask_user` if the information seems highly sensitive.
+- Only invoke tools if an action is requested. If the user asks a general question, just reply.
+- Use `ask_user` if a request is highly ambiguous (e.g., "Schedule a meeting on Friday" when there are multiple Fridays).
+- Always calculate relative dates accurately based on Current time.
 ''';
 
-      final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
-        apiKey: apiKey,
-        systemInstruction: Content.system(systemInstruction),
-        generationConfig: GenerationConfig(responseMimeType: "application/json"),
-      );
+      final fallbackModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+      GenerateContentResponse? response;
+      gen_ai.ChatSession? aiChatSession;
+      Exception? lastException;
 
-      final pastMessages = messages.where((m) => m.id != messages.last.id).toList();
-      final chatHistory = pastMessages.skip(math.max(0, pastMessages.length - 10)).map((m) {
-        if (m.attachmentPath != null && File(m.attachmentPath!).existsSync()) {
-          final bytes = File(m.attachmentPath!).readAsBytesSync();
-          return Content(m.isUser ? 'user' : 'model', [
-            TextPart(m.content),
-            DataPart('image/jpeg', bytes),
-          ]);
-        }
-        return Content(m.isUser ? 'user' : 'model', [TextPart(m.content)]);
-      }).toList();
-
-      final chatSession = model.startChat(history: chatHistory);
-      
-      final lastMsg = messages.last;
-      Content requestContent;
-      if (lastMsg.attachmentPath != null && File(lastMsg.attachmentPath!).existsSync()) {
-        final bytes = File(lastMsg.attachmentPath!).readAsBytesSync();
-        requestContent = Content.multi([
-          TextPart(prompt),
-          DataPart('image/jpeg', bytes),
-        ]);
-      } else {
-        requestContent = Content.text(prompt);
-      }
-      
-      final response = await chatSession.sendMessage(requestContent);
-      final responseText = response.text?.trim();
-
-      if (responseText != null && responseText.isNotEmpty) {
-        String executedAction = 'unknown';
-        String status = 'success';
-        
+      for (final modelName in fallbackModels) {
         try {
-          final List<dynamic> data = jsonDecode(responseText);
-          final actions = data.map((e) => AgentAction.fromJson(e)).toList();
-          executedAction = actions.map((a) => a.action).join(", ");
+          final model = GenerativeModel(
+            model: modelName,
+            apiKey: apiKey,
+            systemInstruction: Content.system(systemInstruction),
+            tools: [_getAgentTools()],
+          );
 
-          final dispatchMessages = await ActionDispatcher.dispatchAll(actions);
-          for (var msg in dispatchMessages) {
-             if (msg != "Done.") {
-               await _addAssistantMessage(msg);
-             }
-          }
+          final chatHistory = messages.where((m) => m.id != messages.last.id).map((m) {
+            if (m.attachmentPath != null && File(m.attachmentPath!).existsSync()) {
+              final bytes = File(m.attachmentPath!).readAsBytesSync();
+              return Content(m.isUser ? 'user' : 'model', [TextPart(m.content), DataPart('image/jpeg', bytes)]);
+            }
+            return Content(m.isUser ? 'user' : 'model', [TextPart(m.content)]);
+          }).toList();
 
-        } catch (e) {
-          status = 'failure: $e';
-          final errorMsg = e.toString();
-          if (errorMsg.startsWith("Exception:")) {
-            await _addAssistantMessage(errorMsg.replaceAll("Exception: ", "").trim());
+          aiChatSession = model.startChat(history: chatHistory);
+          
+          final lastMsg = messages.last;
+          Content requestContent;
+          if (lastMsg.attachmentPath != null && File(lastMsg.attachmentPath!).existsSync()) {
+            final bytes = File(lastMsg.attachmentPath!).readAsBytesSync();
+            requestContent = Content.multi([TextPart(prompt), DataPart('image/jpeg', bytes)]);
           } else {
-            await _addAssistantMessage("I couldn't understand that request. Let's try again.");
+            requestContent = Content.text(prompt);
           }
-        } finally {
+
+          response = await aiChatSession.sendMessage(requestContent);
+          break; // Success
+        } catch (e) {
+          lastException = e is Exception ? e : Exception(e.toString());
+          debugPrint("Assistant Model $modelName failed: $e");
+        }
+      }
+
+      if (response == null || aiChatSession == null) {
+        throw lastException ?? Exception("All fallback models failed.");
+      }
+
+      while (response!.functionCalls.isNotEmpty) {
+        final calls = response!.functionCalls.toList();
+        final List<FunctionResponse> functionResponses = [];
+        
+        for (final call in calls) {
+          if (call.name == 'create_execution_plan') {
+            final steps = call.args['steps'] as List<dynamic>? ?? [];
+            for (var step in steps) {
+              currentPlan.add(AgentStep("Plan: $step"));
+            }
+            notifyListeners();
+            functionResponses.add(FunctionResponse(call.name, {'result': 'Plan acknowledged by user interface.'}));
+            continue;
+          }
+
+          // Add step to UI
+          currentPlan.add(AgentStep("Executing ${call.name}..."));
+          notifyListeners();
+
+          final result = await ActionDispatcher.dispatchFunctionCall(call);
+          
+          currentPlan.last.isCompleted = true;
+          currentPlan.last.result = result['result']?.toString() ?? result['error']?.toString();
+          notifyListeners();
+
+          functionResponses.add(FunctionResponse(call.name, result));
+
           await db!.insert('interaction_logs', {
             'userMessage': prompt,
-            'geminiResponse': responseText,
-            'executedAction': executedAction,
-            'status': status,
+            'geminiResponse': '',
+            'executedAction': call.name,
+            'status': result['error'] != null ? 'Failure: ${result['error']}' : 'Success: ${result['result']}',
             'timestamp': DateTime.now().toIso8601String(),
           });
         }
-      } else {
-        setError("Received empty response from Gemini.");
-        notifyListeners();
+
+        // Send results back to Gemini
+        response = await aiChatSession.sendMessage(Content.functionResponses(functionResponses));
       }
+
+      final responseText = response!.text?.trim();
+      if (responseText != null && responseText.isNotEmpty) {
+        await _addAssistantMessage(responseText);
+      }
+      
     } catch (e) {
       setError("Error: $e");
     } finally {
@@ -307,10 +400,9 @@ If you detect a user preference or fact, you can add a 'remember_fact' action si
     notifyListeners();
   }
 
-  String? selectedImagePath; // used for OCR loading UI
+  String? selectedImagePath;
   bool isProcessingImage = false;
-  
-  String? pendingAttachmentPath; // used for standard attachments
+  String? pendingAttachmentPath;
 
   void attachImage(String path) {
     pendingAttachmentPath = path;
@@ -340,40 +432,18 @@ If you detect a user preference or fact, you can add a 'remember_fact' action si
     }
   }
 
-  Future<void> updateMessages(
-    int id,
-    String content,
-    bool isUser,
-    DateTime timestamp,
-  ) async {
+  Future<void> updateMessages(int id, String content, bool isUser, DateTime timestamp) async {
     await loadDB();
-    if (content.isEmpty) {
-      throw Exception("Mandatory fields must not be empty");
-    }
-
-    ChatMessage message = ChatMessage(
-      sessionId: currentSession?.id,
-      content: content,
-      isUser: isUser,
-      timestamp: timestamp,
-    );
+    ChatMessage message = ChatMessage(sessionId: currentSession?.id, content: content, isUser: isUser, timestamp: timestamp);
     message.id = id;
-
-    await db!.update(
-      'messages',
-      message.toMap(),
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db!.update('messages', message.toMap(), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> clearChat() async {
     if (currentSession == null) return;
     await loadDB();
     await db!.delete('messages', where: 'sessionId = ?', whereArgs: [currentSession!.id]);
-
     messages.clear();
-
     notifyListeners();
   }
 
@@ -384,4 +454,3 @@ If you detect a user preference or fact, you can add a 'remember_fact' action si
     notifyListeners();
   }
 }
-

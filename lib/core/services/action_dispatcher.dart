@@ -1,8 +1,8 @@
-import 'package:mobile_assistant/shared/models/agent_action.dart';
 import 'package:mobile_assistant/core/agent/agent_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/task_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/memory_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/document_tool.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class ActionDispatcher {
   static final Map<String, AgentTool> _tools = {
@@ -11,39 +11,36 @@ class ActionDispatcher {
     'document_tool': DocumentTool(),
   };
 
-  static Future<List<String>> dispatchAll(List<AgentAction> actions) async {
-    List<String> results = [];
+  static String _getToolNameForFunction(String functionName) {
+    if (functionName.contains('task')) return 'task_tool';
+    if (functionName.contains('workload')) return 'task_tool';
+    if (functionName.contains('fact')) return 'memory_tool';
+    if (functionName.contains('memory')) return 'memory_tool';
+    if (functionName.contains('document')) return 'document_tool';
+    if (functionName == 'process_nlp') return 'document_tool';
+    return 'unknown';
+  }
+
+  static Future<Map<String, Object?>> dispatchFunctionCall(FunctionCall call) async {
+    if (call.name == 'reply' || call.name == 'ask_user') {
+      return {'result': 'Handled by UI'};
+    }
     
-    for (var action in actions) {
-      if (action.tool == 'core' && action.action == 'other') {
-        if (action.reply != null && action.reply!.isNotEmpty) {
-          results.add(action.reply!);
-        }
-        continue;
-      }
-      
-      final tool = _tools[action.tool];
-      if (tool == null) {
-        results.add("Error: Tool '${action.tool}' not found.");
-        continue;
-      }
-
-      try {
-        final result = await tool.execute(action.action, action.parameters);
-        results.add(result);
-      } catch (e) {
-        String msg = e.toString();
-        if (msg.startsWith('Exception: ')) {
-          msg = msg.substring('Exception: '.length);
-        }
-        results.add("Error: $msg");
-      }
+    final toolName = _getToolNameForFunction(call.name);
+    final tool = _tools[toolName];
+    if (tool == null) {
+      return {'error': 'Tool not found for function'};
     }
 
-    if (results.isEmpty) {
-      results.add("Done.");
+    try {
+      final result = await tool.execute(call.name, call.args);
+      return {'result': result};
+    } catch (e) {
+      String msg = e.toString();
+      if (msg.startsWith('Exception: ')) {
+        msg = msg.substring('Exception: '.length);
+      }
+      return {'error': msg};
     }
-
-    return results;
   }
 }

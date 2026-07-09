@@ -21,7 +21,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -73,6 +73,10 @@ class AppDatabase {
 
     if (oldVersion < 6) {
       await db.execute('ALTER TABLE messages ADD COLUMN attachmentPath TEXT');
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('ALTER TABLE documents ADD COLUMN embedding TEXT');
     }
   }
 
@@ -146,7 +150,8 @@ class AppDatabase {
       original_source TEXT,
       document_type TEXT,
       file_path TEXT,
-      createdAt TEXT
+      createdAt TEXT,
+      embedding TEXT
     )''');
   }
 }

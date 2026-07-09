@@ -5,7 +5,7 @@ class OCRService {
   static Future<String> extractTextFromImage(String imagePath) async {
     final file = File(imagePath);
     if (!await file.exists()) {
-      throw Exception("Image file not found: \$imagePath");
+      throw Exception("Image file not found: $imagePath");
     }
 
     final inputImage = InputImage.fromFilePath(imagePath);
