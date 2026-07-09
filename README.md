@@ -1,47 +1,40 @@
 # Mobile Assistant
 
-Mobile Assistant is a Flutter application focused on building an AI-powered mobile assistant experience.
+A privacy-first Flutter AI assistant with encrypted local storage, long-term memory, task management, OCR, and biometric authentication.
+
+## Features
+
+- AI Chat Assistant (Google Gemini)
+- Multi-session conversations
+- Automatic chat titles
+- Agent reasoning pipeline
+- OCR from images
+- Smart task management
+- Priority & deadline sorting
+- Encrypted document storage
+- Encrypted long-term memory
+- SQLite local database
+- Biometric authentication
+- Secure keystore/keychain storage
+- Light, Dark & System themes
+- Encrypted ZIP backups
+- Local data cleanup
 
 ## Tech Stack
 
-- **Framework:** Flutter
-- **Language:** Dart
-- **Platform Targets:** Android, iOS (Flutter-supported platforms)
+- Flutter
+- Dart
+- MVVM Architecture
+- Google Gemini API
+- SQLite
+- flutter_secure_storage
+- local_auth
+- Cryptography
+- OCR
 
-## Project Structure
+## Privacy
 
-This repository currently follows the standard Flutter app layout:
-
-- `lib/` – Main application source code
-- `test/` – Widget and unit tests
-- `android/` – Android platform files
-- `ios/` – iOS platform files
-- `web/` – Web platform support files
-- `linux/`, `macos/`, `windows/` – Desktop platform support files
-
-## Getting Started
-
-### Prerequisites
-
-- [Flutter SDK](https://docs.flutter.dev/get-started/install)
-- Dart SDK (included with Flutter)
-- Android Studio or VS Code with Flutter extensions
-
-### Run the app
-
-```bash
-flutter pub get
-flutter run
-```
-
-## Testing
-
-Run tests with:
-
-```bash
-flutter test
-```
-
-## Notes
-
-This README has been updated from the default Flutter template to better reflect the current repository layout and purpose.
+- Local-first
+- On-device encryption
+- Secure biometric lock
+- No cloud dependency
