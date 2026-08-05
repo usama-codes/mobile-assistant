@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_assistant/features/documents/presentation/providers/document_providers.dart';
 
-
 class DocumentScreen extends ConsumerStatefulWidget {
   const DocumentScreen({super.key});
 
@@ -11,7 +10,6 @@ class DocumentScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentScreenState extends ConsumerState<DocumentScreen> {
-
   @override
   Widget build(BuildContext context) {
     final docAsync = ref.watch(documentProvider);
@@ -30,10 +28,21 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Knowledge Base', style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold, fontSize: 24)),
+            Text(
+              'Knowledge Base',
+              style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
             Text(
               'Your extracted documents and notes',
-              style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13, fontWeight: FontWeight.normal),
+              style: TextStyle(
+                color: theme.textTheme.bodySmall?.color,
+                fontSize: 13,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -42,91 +51,131 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
       body: docAsync.isLoading
           ? const Center(child: CircularProgressIndicator())
           : (docAsync.value ?? []).isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.folder_open, size: 64, color: theme.dividerColor),
-                      const SizedBox(height: 16),
-                      Text('No documents yet', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.folder_open, size: 64, color: theme.dividerColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No documents yet',
+                    style: TextStyle(color: theme.textTheme.bodySmall?.color),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: (docAsync.value ?? []).length,
-                  itemBuilder: (context, index) {
-                    final doc = (docAsync.value ?? [])[index];
-                    return Card(
-                      color: theme.cardColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.dividerColor)),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          child: Icon(Icons.description, color: theme.colorScheme.primary),
-                        ),
-                        title: Text(doc.title, style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
-                        subtitle: Text('Folder: ${doc.folder} • Type: ${doc.documentType}', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => notifier.deleteDocument(doc.id),
-                        ),
-                        onTap: () {
-                          // View dialog showing file content
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              backgroundColor: theme.cardColor,
-                              title: Text(doc.title),
-                              content: SizedBox(
-                                width: double.maxFinite,
-                                child: FutureBuilder<String>(
-                                  future: ref.read(documentRepositoryProvider).readDocumentContent(doc.filePath),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const SizedBox(
-                                        height: 100,
-                                        child: Center(child: CircularProgressIndicator()),
-                                      );
-                                    }
-                                    if (snapshot.hasError) {
-                                      return Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red));
-                                    }
-                                    final content = snapshot.data ?? 'No content';
-                                    return SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            content,
-                                            style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 15, height: 1.4),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          Divider(color: theme.dividerColor),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'File Path: ${doc.filePath}',
-                                            style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 11),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))
-                              ],
-                            ),
-                          );
-                        },
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: (docAsync.value ?? []).length,
+              itemBuilder: (context, index) {
+                final doc = (docAsync.value ?? [])[index];
+                return Card(
+                  color: theme.cardColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: theme.dividerColor),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
                       ),
-                    );
-                  },
-                ),
+                      child: Icon(
+                        Icons.description,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    title: Text(
+                      doc.title,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Folder: ${doc.folder} • Type: ${doc.documentType}',
+                      style: TextStyle(color: theme.textTheme.bodySmall?.color),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => notifier.deleteDocument(doc.id),
+                    ),
+                    onTap: () {
+                      // View dialog showing file content
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          backgroundColor: theme.cardColor,
+                          title: Text(doc.title),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: FutureBuilder<String>(
+                              future: ref
+                                  .read(documentRepositoryProvider)
+                                  .readDocumentContent(doc.filePath),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const SizedBox(
+                                    height: 100,
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  return Text(
+                                    'Error: ${snapshot.error}',
+                                    style: const TextStyle(color: Colors.red),
+                                  );
+                                }
+                                final content = snapshot.data ?? 'No content';
+                                return SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        content,
+                                        style: TextStyle(
+                                          color:
+                                              theme.textTheme.bodyLarge?.color,
+                                          fontSize: 15,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Divider(color: theme.dividerColor),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'File Path: ${doc.filePath}',
+                                        style: TextStyle(
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
-
 }

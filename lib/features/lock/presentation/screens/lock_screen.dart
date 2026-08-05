@@ -11,14 +11,15 @@ class LockScreen extends ConsumerStatefulWidget {
 }
 
 class _LockScreenState extends ConsumerState<LockScreen> {
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(lockProvider);
 
     ref.listen(lockProvider, (previous, next) {
       if (next.value == true) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
       }
     });
 
@@ -34,17 +35,31 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                   const SizedBox(height: 24),
                   const Text(
                     'App Locked',
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.fingerprint, color: Color(0xFF1D4ED8)),
-                    label: const Text('Unlock', style: TextStyle(color: Color(0xFF1D4ED8))),
+                    icon: const Icon(
+                      Icons.fingerprint,
+                      color: Color(0xFF1D4ED8),
+                    ),
+                    label: const Text(
+                      'Unlock',
+                      style: TextStyle(color: Color(0xFF1D4ED8)),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                     ),
-                    onPressed: () => ref.read(lockProvider.notifier).checkAuth(),
+                    onPressed: () =>
+                        ref.read(lockProvider.notifier).checkAuth(),
                   ),
                 ],
               ),

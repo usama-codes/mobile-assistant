@@ -169,7 +169,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       // Check if file already exists in either location
       final appDocs = await getApplicationDocumentsDirectory();
       final legacyFilePath = p.join(appDocs.path, 'gemma-2b-it-cpu-int4.bin');
-      
+
       final task = DownloadTask(
         url:
             'https://github.com/usama-codes/gemma-model-hosting/releases/download/v1.0.0/gemma-2b-it-cpu-int4.bin',
@@ -214,7 +214,9 @@ class SettingsNotifier extends _$SettingsNotifier {
           onProgress: (progress) {
             if (progress > 0) {
               state = AsyncData(
-                state.value!.copyWith(downloadProgress: (progress * 100).toInt()),
+                state.value!.copyWith(
+                  downloadProgress: (progress * 100).toInt(),
+                ),
               );
             }
           },
@@ -234,9 +236,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       await FlutterGemma.installModel(
         modelType: ModelType.gemmaIt,
         fileType: ModelFileType.binary,
-      )
-          .fromFile(finalFilePath)
-          .install();
+      ).fromFile(finalFilePath).install();
 
       InferenceService.instance.isLocalModelLoaded = true;
       state = AsyncData(

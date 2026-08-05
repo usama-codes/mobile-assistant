@@ -25,7 +25,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'chat_provider.g.dart';
 
 class ChatState {
-
   ChatState({
     this.sessions = const [],
     this.currentSession,
@@ -124,7 +123,9 @@ class ChatNotifier extends _$ChatNotifier {
     final messages = state.messages;
     if (messages.isEmpty) return;
 
-    final hiMessages = messages.where((m) => m.content.toLowerCase().trim() == 'hi' && m.isUser).toList();
+    final hiMessages = messages
+        .where((m) => m.content.toLowerCase().trim() == 'hi' && m.isUser)
+        .toList();
     if (hiMessages.length > 1) {
       for (int i = 0; i < hiMessages.length - 1; i++) {
         if (hiMessages[i].id != null) {
@@ -148,10 +149,7 @@ class ChatNotifier extends _$ChatNotifier {
   }
 
   Future<void> createNewSession() async {
-    var newSession = ChatSession(
-      title: 'New Chat',
-      createdAt: DateTime.now(),
-    );
+    var newSession = ChatSession(title: 'New Chat', createdAt: DateTime.now());
     newSession = await _repository.insertSession(newSession);
     final sessions = [newSession, ...state.sessions];
     state = state.copyWith(
@@ -284,7 +282,9 @@ class ChatNotifier extends _$ChatNotifier {
 
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (!isLocalOnly && (apiKey == null || apiKey.isEmpty)) {
-        setError('API Key not found. Add your GEMINI_API_KEY to the .env file.');
+        setError(
+          'API Key not found. Add your GEMINI_API_KEY to the .env file.',
+        );
         return;
       }
 
@@ -310,7 +310,8 @@ class ChatNotifier extends _$ChatNotifier {
         logger.w('Failed to fetch RAG context (offline or error)', error: e);
       }
 
-      final systemInstruction = '''
+      final systemInstruction =
+          '''
 You are a proactive local agent. Use the provided tools to fulfill requests.
 Current time: ${DateTime.now().toIso8601String()}
 Pending tasks: [$tasksContext]
@@ -349,9 +350,7 @@ $documentContext
                 DataPart('image/jpeg', bytes),
               ]);
             }
-            return Content(m.isUser ? 'user' : 'model', [
-              TextPart(m.content),
-            ]);
+            return Content(m.isUser ? 'user' : 'model', [TextPart(m.content)]);
           })
           .toList();
 
@@ -369,7 +368,7 @@ $documentContext
       }
 
       // final isLocalOnly = svc.strategy == InferenceStrategy.localOnly;
-      
+
       if (isLocalOnly) {
         try {
           inferenceResponse = await InferenceService.instance
@@ -426,17 +425,24 @@ $documentContext
               );
               svc.strategy = previous;
             } catch (e) {
-              setError('Cloud failed (${lastException.toString()}) AND Local fallback failed: $e');
+              setError(
+                'Cloud failed (${lastException.toString()}) AND Local fallback failed: $e',
+              );
               return;
             }
           } else {
             setError(
-                'Cloud models failed (e.g. quota exceeded) and Local Gemma model is not loaded. Download it in Settings to enable offline fallback.');
+              'Cloud models failed (e.g. quota exceeded) and Local Gemma model is not loaded. Download it in Settings to enable offline fallback.',
+            );
             return;
           }
         } else {
-          if (lastException.toString().toLowerCase().contains('spike') || lastException.toString().contains('503') || lastException.toString().toLowerCase().contains('overloaded')) {
-            setError('All cloud models are currently overloaded. Please try again later or switch to local inference.');
+          if (lastException.toString().toLowerCase().contains('spike') ||
+              lastException.toString().contains('503') ||
+              lastException.toString().toLowerCase().contains('overloaded')) {
+            setError(
+              'All cloud models are currently overloaded. Please try again later or switch to local inference.',
+            );
           } else {
             setError('Failed to generate response. Please try again.');
           }
@@ -446,7 +452,7 @@ $documentContext
 
       if (inferenceResponse == null ||
           (inferenceResponse.text == null &&
-           inferenceResponse.functionCalls.isEmpty)) {
+              inferenceResponse.functionCalls.isEmpty)) {
         setError('Received empty response from assistant.');
         return;
       }
@@ -501,10 +507,16 @@ $documentContext
           responseText = toolResponse.text;
         } catch (e) {
           logger.w('Tool response failed', error: e);
-          if (e.toString().toLowerCase().contains('spike') || e.toString().contains('503') || e.toString().toLowerCase().contains('overloaded')) {
-            setError('The cloud model is currently experiencing high traffic spikes. Please try again later or switch to local inference.');
+          if (e.toString().toLowerCase().contains('spike') ||
+              e.toString().contains('503') ||
+              e.toString().toLowerCase().contains('overloaded')) {
+            setError(
+              'The cloud model is currently experiencing high traffic spikes. Please try again later or switch to local inference.',
+            );
           } else {
-            setError('An error occurred while calling tools. Please try again.');
+            setError(
+              'An error occurred while calling tools. Please try again.',
+            );
           }
           return;
         }

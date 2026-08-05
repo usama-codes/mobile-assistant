@@ -2,7 +2,6 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AppDatabase {
-
   AppDatabase._init();
   static final AppDatabase instance = AppDatabase._init();
 
@@ -35,15 +34,17 @@ CREATE TABLE chat_sessions(
         title TEXT,
         createdAt TEXT
       )''');
-      
+
       await db.execute('ALTER TABLE messages ADD COLUMN sessionId INTEGER');
-      
+
       final now = DateTime.now().toIso8601String();
-      await db.execute('INSERT INTO chat_sessions (title, createdAt) VALUES ("Default Chat", "$now")');
-      
+      await db.execute(
+        'INSERT INTO chat_sessions (title, createdAt) VALUES ("Default Chat", "$now")',
+      );
+
       await db.execute('UPDATE messages SET sessionId = 1');
     }
-    
+
     if (oldVersion < 3) {
       await db.execute('''
 CREATE TABLE interaction_logs(
@@ -90,7 +91,7 @@ CREATE TABLE users(
       name TEXT,
       email TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE tasks(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,7 +101,7 @@ CREATE TABLE tasks(
       completed INTEGER,
       priority TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE reminders(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,7 +109,7 @@ CREATE TABLE reminders(
       reminderTime TEXT,
       FOREIGN KEY(taskId) REFERENCES tasks(id)
     )''');
-    
+
     await db.execute('''
 CREATE TABLE notes(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,7 +117,7 @@ CREATE TABLE notes(
       content TEXT,
       createdAt TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE memories(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,7 +126,7 @@ CREATE TABLE memories(
       createdAt TEXT,
       embedding TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE messages(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,14 +136,14 @@ CREATE TABLE messages(
       timestamp TEXT,
       attachmentPath TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE chat_sessions(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT,
       createdAt TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE interaction_logs(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,7 +153,7 @@ CREATE TABLE interaction_logs(
       status TEXT,
       timestamp TEXT
     )''');
-    
+
     await db.execute('''
 CREATE TABLE documents(
       id INTEGER PRIMARY KEY AUTOINCREMENT,

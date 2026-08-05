@@ -40,10 +40,7 @@ void main() {
     )..id = 2;
 
     final builder = DeviceBuilder()
-      ..overrideDevicesForAllScenarios(devices: [
-        Device.phone,
-        Device.iphone11,
-      ])
+      ..overrideDevicesForAllScenarios(devices: [Device.phone, Device.iphone11])
       ..addScenario(
         widget: ProviderScope(
           overrides: [

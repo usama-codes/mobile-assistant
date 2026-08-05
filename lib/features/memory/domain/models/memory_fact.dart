@@ -14,5 +14,6 @@ abstract class MemoryFact with _$MemoryFact {
 
   const MemoryFact._();
 
-  factory MemoryFact.fromJson(Map<String, dynamic> json) => _$MemoryFactFromJson(json);
+  factory MemoryFact.fromJson(Map<String, dynamic> json) =>
+      _$MemoryFactFromJson(json);
 }

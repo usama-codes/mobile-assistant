@@ -10,7 +10,7 @@ class OCRService {
 
     final inputImage = InputImage.fromFilePath(imagePath);
     final textRecognizer = TextRecognizer();
-    
+
     try {
       final recognizedText = await textRecognizer.processImage(inputImage);
       return recognizedText.text;

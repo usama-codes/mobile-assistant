@@ -55,7 +55,6 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
 // ── Segmented Control ──────────────────────────────────────────────────────
 
 class _SegmentedControl extends StatelessWidget {
-
   const _SegmentedControl({
     required this.selected,
     required this.labels,
@@ -83,7 +82,9 @@ class _SegmentedControl extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).cardColor : Colors.transparent,
+                  color: isSelected
+                      ? Theme.of(context).cardColor
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppTheme.radiusS),
                   border: isSelected
                       ? Border.all(color: Theme.of(context).colorScheme.outline)
@@ -94,7 +95,9 @@ class _SegmentedControl extends StatelessWidget {
                     labels[i],
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                       color: isSelected
                           ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -121,10 +124,14 @@ class _DocumentsView extends ConsumerWidget {
 
     return async.when(
       loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.accent)),
+        child: CircularProgressIndicator(color: AppTheme.accent),
+      ),
       error: (e, _) => Center(
-          child: Text('Error: $e',
-              style: const TextStyle(color: AppTheme.priorityCritical))),
+        child: Text(
+          'Error: $e',
+          style: const TextStyle(color: AppTheme.priorityCritical),
+        ),
+      ),
       data: (docs) => docs.isEmpty
           ? const EmptyState(
               icon: Icons.folder_open_outlined,
@@ -174,7 +181,11 @@ class _DocumentTile extends ConsumerWidget {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(AppTheme.radiusS),
           ),
-          child: Icon(_typeIcon(), size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          child: Icon(
+            _typeIcon(),
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         title: Text(
           doc.title,
@@ -187,36 +198,60 @@ class _DocumentTile extends ConsumerWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: PopupMenuButton<String>(
-          icon: Icon(Icons.more_vert_rounded,
-              size: 18, color: Theme.of(context).disabledColor),
+          icon: Icon(
+            Icons.more_vert_rounded,
+            size: 18,
+            color: Theme.of(context).disabledColor,
+          ),
           color: Theme.of(context).cardColor,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radiusM)),
+            borderRadius: BorderRadius.circular(AppTheme.radiusM),
+          ),
           onSelected: (v) async {
             if (v == 'view') {
               await _viewDocument(context, doc);
             } else if (v == 'delete') {
-              ref.read(documentNotifierProvider.notifier).deleteDocument(doc.id);
+              ref
+                  .read(documentNotifierProvider.notifier)
+                  .deleteDocument(doc.id);
             }
           },
           itemBuilder: (_) => [
             PopupMenuItem(
               value: 'view',
-              child: Row(children: [
-                Icon(Icons.open_in_new_rounded, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text('View', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              ]),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.open_in_new_rounded,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'View',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const PopupMenuItem(
               value: 'delete',
-              child: Row(children: [
-                Icon(Icons.delete_outline_rounded,
-                    size: 16, color: AppTheme.priorityCritical),
-                SizedBox(width: 8),
-                Text('Delete',
-                    style: TextStyle(color: AppTheme.priorityCritical)),
-              ]),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.delete_outline_rounded,
+                    size: 16,
+                    color: AppTheme.priorityCritical,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Delete',
+                    style: TextStyle(color: AppTheme.priorityCritical),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -248,17 +283,25 @@ class _BiometricGate extends ConsumerWidget {
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusL)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          const Icon(Icons.fingerprint_rounded, size: 56, color: AppTheme.accent),
+          const Icon(
+            Icons.fingerprint_rounded,
+            size: 56,
+            color: AppTheme.accent,
+          ),
           const SizedBox(height: 16),
           Text(
             'Authenticate to view\n${doc.title}',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 15,
+            ),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -291,15 +334,26 @@ class _BiometricGate extends ConsumerWidget {
       builder: (_) => AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusL)),
-        title: Text(title,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 15,
+          ),
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
-            child: Text(content,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, height: 1.6)),
+            child: Text(
+              content,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+                height: 1.6,
+              ),
+            ),
           ),
         ),
         actions: [
@@ -324,10 +378,14 @@ class _InsightsView extends ConsumerWidget {
 
     return async.when(
       loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.accent)),
+        child: CircularProgressIndicator(color: AppTheme.accent),
+      ),
       error: (e, _) => Center(
-          child: Text('Error: $e',
-              style: const TextStyle(color: AppTheme.priorityCritical))),
+        child: Text(
+          'Error: $e',
+          style: const TextStyle(color: AppTheme.priorityCritical),
+        ),
+      ),
       data: (memories) => memories.isEmpty
           ? const EmptyState(
               icon: Icons.psychology_outlined,
@@ -371,7 +429,11 @@ class _MemoryCard extends ConsumerWidget {
                 width: 3,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Color.lerp(Theme.of(context).colorScheme.outline, AppTheme.accent, importance),
+                  color: Color.lerp(
+                    Theme.of(context).colorScheme.outline,
+                    AppTheme.accent,
+                    importance,
+                  ),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
@@ -387,9 +449,9 @@ class _MemoryCard extends ConsumerWidget {
                 Text(
                   fact.fact,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        height: 1.4,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -407,8 +469,11 @@ class _MemoryCard extends ConsumerWidget {
             },
             child: Padding(
               padding: const EdgeInsets.only(left: 8, top: 2),
-              child: Icon(Icons.close_rounded,
-                  size: 16, color: Theme.of(context).disabledColor),
+              child: Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: Theme.of(context).disabledColor,
+              ),
             ),
           ),
         ],
@@ -416,6 +481,3 @@ class _MemoryCard extends ConsumerWidget {
     );
   }
 }
-
-
-

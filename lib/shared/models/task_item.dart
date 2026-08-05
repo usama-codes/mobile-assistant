@@ -1,7 +1,6 @@
 import 'package:mobile_assistant/shared/models/priority.dart';
 
 class TaskItem {
-
   TaskItem({
     required this.title,
     required this.description,
@@ -34,7 +33,7 @@ class TaskItem {
   DateTime dueDate;
   bool completed;
   Priority priority;
-  String? recurrenceRule;   // RRULE string: FREQ=DAILY, FREQ=WEEKLY, FREQ=MONTHLY
+  String? recurrenceRule; // RRULE string: FREQ=DAILY, FREQ=WEEKLY, FREQ=MONTHLY
   DateTime? lastCompletedAt;
 
   bool get isRecurring => recurrenceRule != null && recurrenceRule!.isNotEmpty;
@@ -50,11 +49,18 @@ class TaskItem {
   /// Compute the next due date for a recurring task after completion.
   DateTime nextDueDate() {
     if (recurrenceRule == null) return dueDate;
-    if (recurrenceRule!.contains('DAILY')) return dueDate.add(const Duration(days: 1));
-    if (recurrenceRule!.contains('WEEKLY')) return dueDate.add(const Duration(days: 7));
+    if (recurrenceRule!.contains('DAILY'))
+      return dueDate.add(const Duration(days: 1));
+    if (recurrenceRule!.contains('WEEKLY'))
+      return dueDate.add(const Duration(days: 7));
     if (recurrenceRule!.contains('MONTHLY')) {
-      return DateTime(dueDate.year, dueDate.month + 1, dueDate.day,
-          dueDate.hour, dueDate.minute);
+      return DateTime(
+        dueDate.year,
+        dueDate.month + 1,
+        dueDate.day,
+        dueDate.hour,
+        dueDate.minute,
+      );
     }
     return dueDate.add(const Duration(days: 1));
   }

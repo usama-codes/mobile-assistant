@@ -7,12 +7,9 @@ class EmbeddingService {
   static Future<List<double>> getEmbedding(String text) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null) throw Exception('API Key not found.');
-    
-    final model = GenerativeModel(
-      model: 'gemini-embedding-2',
-      apiKey: apiKey,
-    );
-    
+
+    final model = GenerativeModel(model: 'gemini-embedding-2', apiKey: apiKey);
+
     final content = Content.text(text);
     final result = await model.embedContent(content);
     return result.embedding.values;

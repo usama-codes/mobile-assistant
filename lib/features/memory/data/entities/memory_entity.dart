@@ -2,9 +2,11 @@ import 'package:objectbox/objectbox.dart';
 
 @Entity()
 class MemoryEntity {
-
   MemoryEntity({
-    required this.fact, required this.importance, required this.createdAt, this.id = 0,
+    required this.fact,
+    required this.importance,
+    required this.createdAt,
+    this.id = 0,
     this.embedding,
   });
   @Id()
@@ -12,7 +14,7 @@ class MemoryEntity {
 
   String fact;
   double importance;
-  
+
   @Property(type: PropertyType.date)
   DateTime createdAt;
 

@@ -13,34 +13,69 @@ class TaskTool implements AgentTool {
     FunctionDeclaration(
       'create_task',
       'Create a new task for the user',
-      Schema(SchemaType.object, properties: {
-        'title': Schema(SchemaType.string, description: 'Task title'),
-        'description': Schema(SchemaType.string, description: 'Optional details'),
-        'dueDate': Schema(SchemaType.string, description: 'ISO8601 datetime string'),
-        'priority': Schema(SchemaType.string, description: 'low, medium, high, or critical'),
-        'recurrenceRule': Schema(SchemaType.string, description: 'RRULE string e.g. FREQ=DAILY, FREQ=WEEKLY, FREQ=MONTHLY'),
-      }, requiredProperties: ['title']),
+      Schema(
+        SchemaType.object,
+        properties: {
+          'title': Schema(SchemaType.string, description: 'Task title'),
+          'description': Schema(
+            SchemaType.string,
+            description: 'Optional details',
+          ),
+          'dueDate': Schema(
+            SchemaType.string,
+            description: 'ISO8601 datetime string',
+          ),
+          'priority': Schema(
+            SchemaType.string,
+            description: 'low, medium, high, or critical',
+          ),
+          'recurrenceRule': Schema(
+            SchemaType.string,
+            description:
+                'RRULE string e.g. FREQ=DAILY, FREQ=WEEKLY, FREQ=MONTHLY',
+          ),
+        },
+        requiredProperties: ['title'],
+      ),
     ),
     FunctionDeclaration(
       'edit_task',
       'Edit an existing task by id',
-      Schema(SchemaType.object, properties: {
-        'id': Schema(SchemaType.integer, description: 'Task id'),
-        'title': Schema(SchemaType.string),
-        'description': Schema(SchemaType.string),
-        'dueDate': Schema(SchemaType.string, description: 'ISO8601 datetime string'),
-        'priority': Schema(SchemaType.string, description: 'low, medium, high, or critical'),
-      }, requiredProperties: ['id']),
+      Schema(
+        SchemaType.object,
+        properties: {
+          'id': Schema(SchemaType.integer, description: 'Task id'),
+          'title': Schema(SchemaType.string),
+          'description': Schema(SchemaType.string),
+          'dueDate': Schema(
+            SchemaType.string,
+            description: 'ISO8601 datetime string',
+          ),
+          'priority': Schema(
+            SchemaType.string,
+            description: 'low, medium, high, or critical',
+          ),
+        },
+        requiredProperties: ['id'],
+      ),
     ),
     FunctionDeclaration(
       'complete_task',
       'Mark a task as completed',
-      Schema(SchemaType.object, properties: {'id': Schema(SchemaType.integer)}, requiredProperties: ['id']),
+      Schema(
+        SchemaType.object,
+        properties: {'id': Schema(SchemaType.integer)},
+        requiredProperties: ['id'],
+      ),
     ),
     FunctionDeclaration(
       'delete_task',
       'Permanently delete a task',
-      Schema(SchemaType.object, properties: {'id': Schema(SchemaType.integer)}, requiredProperties: ['id']),
+      Schema(
+        SchemaType.object,
+        properties: {'id': Schema(SchemaType.integer)},
+        requiredProperties: ['id'],
+      ),
     ),
     FunctionDeclaration(
       'get_overdue_tasks',
@@ -57,25 +92,30 @@ class TaskTool implements AgentTool {
   @override
   bool canHandle(String functionName) {
     const handled = {
-      'create_task', 'edit_task', 'complete_task', 'delete_task',
-      'get_overdue_tasks', 'get_workload',
+      'create_task',
+      'edit_task',
+      'complete_task',
+      'delete_task',
+      'get_overdue_tasks',
+      'get_workload',
     };
     return handled.contains(functionName);
   }
-
 
   @override
   String get name => 'task_tool';
 
   @override
-  String get description => 'Perform CRUD operations on tasks and query tasks (overdue, workload).';
+  String get description =>
+      'Perform CRUD operations on tasks and query tasks (overdue, workload).';
 
   @override
   Future<String> execute(String action, Map<String, dynamic> parameters) async {
     switch (action) {
       case 'create_task':
         final title = parameters['title']?.toString().trim();
-        if (title == null || title.isEmpty) throw Exception('Task title is required.');
+        if (title == null || title.isEmpty)
+          throw Exception('Task title is required.');
 
         var dueDate = DateTime.now().add(const Duration(hours: 2));
         final dueDateStr = parameters['dueDate'];
@@ -106,12 +146,16 @@ class TaskTool implements AgentTool {
         );
         final updated = TaskItem(
           title: parameters['title']?.toString() ?? existing.title,
-          description: parameters['description']?.toString() ?? existing.description,
+          description:
+              parameters['description']?.toString() ?? existing.description,
           dueDate: parameters['dueDate'] != null
-              ? (DateTime.tryParse(parameters['dueDate'].toString()) ?? existing.dueDate)
+              ? (DateTime.tryParse(parameters['dueDate'].toString()) ??
+                    existing.dueDate)
               : existing.dueDate,
           completed: existing.completed,
-          priority: parameters['priority'] != null ? _parsePriority(parameters['priority']) : existing.priority,
+          priority: parameters['priority'] != null
+              ? _parsePriority(parameters['priority'])
+              : existing.priority,
           recurrenceRule: existing.recurrenceRule,
         )..id = existing.id;
         await _repo.updateTask(updated);
@@ -145,14 +189,18 @@ class TaskTool implements AgentTool {
       case 'get_overdue_tasks':
         final tasks = await _repo.getAllTasks();
         final now = DateTime.now();
-        final overdue = tasks.where((t) => !t.completed && t.dueDate.isBefore(now)).toList();
+        final overdue = tasks
+            .where((t) => !t.completed && t.dueDate.isBefore(now))
+            .toList();
         if (overdue.isEmpty) return 'No overdue tasks.';
         return 'Overdue (${overdue.length}): ${overdue.map((t) => "'${t.title}' (id:${t.id})").join(', ')}';
 
       case 'get_workload':
         final tasks = await _repo.getAllTasks();
         final pending = tasks.where((t) => !t.completed).length;
-        return pending == 0 ? 'No pending tasks.' : 'You have $pending pending task(s).';
+        return pending == 0
+            ? 'No pending tasks.'
+            : 'You have $pending pending task(s).';
 
       default:
         throw Exception("Unknown action '$action' for TaskTool.");
@@ -162,10 +210,14 @@ class TaskTool implements AgentTool {
   Priority _parsePriority(dynamic raw) {
     if (raw == null) return Priority.medium;
     switch (raw.toString().toLowerCase()) {
-      case 'low': return Priority.low;
-      case 'high': return Priority.high;
-      case 'critical': return Priority.critical;
-      default: return Priority.medium;
+      case 'low':
+        return Priority.low;
+      case 'high':
+        return Priority.high;
+      case 'critical':
+        return Priority.critical;
+      default:
+        return Priority.medium;
     }
   }
 }

@@ -1,7 +1,9 @@
 class ChatMessage {
-
   ChatMessage({
-    required this.content, required this.isUser, required this.timestamp, this.sessionId,
+    required this.content,
+    required this.isUser,
+    required this.timestamp,
+    this.sessionId,
     this.attachmentPath,
   });
 

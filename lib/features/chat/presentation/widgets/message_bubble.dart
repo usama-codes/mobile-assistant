@@ -4,13 +4,14 @@ import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/shared/models/chat_message.dart';
 
 class MessageBubble extends StatelessWidget {
-
   const MessageBubble({required this.message, super.key});
   final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
-    return message.isUser ? _UserBubble(message: message) : _AssistantBubble(message: message);
+    return message.isUser
+        ? _UserBubble(message: message)
+        : _AssistantBubble(message: message);
   }
 }
 
@@ -45,7 +46,9 @@ class _UserBubble extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: AppTheme.accent.withValues(alpha: 0.25),
+                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppTheme.radiusL),
                   topRight: Radius.circular(AppTheme.radiusL),
@@ -56,8 +59,8 @@ class _UserBubble extends StatelessWidget {
               child: Text(
                 message.content,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -89,19 +92,24 @@ class _AssistantBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Theme.of(context).colorScheme.outline),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded,
-                    size: 14, color: AppTheme.accent),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: AppTheme.accent,
+                ),
               ),
             ),
             Flexible(
               child: Text(
                 message.content,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      height: 1.55,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurface,
+                  height: 1.55,
+                ),
               ),
             ),
           ],
@@ -127,8 +135,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
   @override
@@ -151,8 +160,11 @@ class _TypingIndicatorState extends State<TypingIndicator>
               shape: BoxShape.circle,
               border: Border.all(color: Theme.of(context).colorScheme.outline),
             ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                size: 14, color: AppTheme.accent),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 14,
+              color: AppTheme.accent,
+            ),
           ),
           const SizedBox(width: 10),
           Row(
@@ -161,7 +173,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
                 animation: _ctrl,
                 builder: (_, _) {
                   final offset = (_ctrl.value - i * 0.15) % 1.0;
-                  final scale = 0.6 + 0.4 * (offset < 0.5 ? offset * 2 : (1 - offset) * 2);
+                  final scale =
+                      0.6 +
+                      0.4 * (offset < 0.5 ? offset * 2 : (1 - offset) * 2);
                   return Container(
                     margin: const EdgeInsets.only(right: 4),
                     width: 7 * scale,
@@ -180,4 +194,3 @@ class _TypingIndicatorState extends State<TypingIndicator>
     );
   }
 }
-

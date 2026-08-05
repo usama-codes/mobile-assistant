@@ -16,5 +16,6 @@ abstract class DocumentItem with _$DocumentItem {
     required DateTime createdAt,
   }) = _DocumentItem;
 
-  factory DocumentItem.fromJson(Map<String, dynamic> json) => _$DocumentItemFromJson(json);
+  factory DocumentItem.fromJson(Map<String, dynamic> json) =>
+      _$DocumentItemFromJson(json);
 }

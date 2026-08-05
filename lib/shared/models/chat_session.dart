@@ -1,8 +1,5 @@
 class ChatSession {
-
-  ChatSession({
-    required this.title, required this.createdAt, this.id,
-  });
+  ChatSession({required this.title, required this.createdAt, this.id});
 
   factory ChatSession.fromMap(Map<String, dynamic> map) {
     return ChatSession(

@@ -219,7 +219,9 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
             children: [
               // Priority left accent bar
               Positioned(
-                left: 0, top: 0, bottom: 0,
+                left: 0,
+                top: 0,
+                bottom: 0,
                 child: Container(width: 3, color: priorityColor),
               ),
               InkWell(
@@ -256,8 +258,13 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: task.completed
-                                    ? Icon(Icons.check_rounded,
-                                        size: 14, color: Theme.of(context).scaffoldBackgroundColor)
+                                    ? Icon(
+                                        Icons.check_rounded,
+                                        size: 14,
+                                        color: Theme.of(
+                                          context,
+                                        ).scaffoldBackgroundColor,
+                                      )
                                     : null,
                               ),
                             ),
@@ -278,7 +285,9 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
                                       : onSurface,
                                 ),
                                 maxLines: _expanded ? null : 1,
-                                overflow: _expanded ? null : TextOverflow.ellipsis,
+                                overflow: _expanded
+                                    ? null
+                                    : TextOverflow.ellipsis,
                               ),
                             ),
 
@@ -288,8 +297,11 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
                                 padding: const EdgeInsets.only(left: 8),
                                 child: Tooltip(
                                   message: task.recurrenceLabel,
-                                  child: Icon(Icons.repeat_rounded,
-                                      size: 14, color: onSurfaceVariant),
+                                  child: Icon(
+                                    Icons.repeat_rounded,
+                                    size: 14,
+                                    color: onSurfaceVariant,
+                                  ),
                                 ),
                               ),
 
@@ -298,13 +310,20 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
                               padding: const EdgeInsets.only(left: 8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _isOverdue
-                                      ? AppTheme.priorityCritical.withValues(alpha: 0.15)
-                                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  borderRadius:
-                                      BorderRadius.circular(AppTheme.radiusPill),
+                                      ? AppTheme.priorityCritical.withValues(
+                                          alpha: 0.15,
+                                        )
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusPill,
+                                  ),
                                 ),
                                 child: Text(
                                   _dueLabel(),
@@ -326,7 +345,10 @@ class _TaskRowState extends ConsumerState<_TaskRow> {
                           const SizedBox(height: 10),
                           Text(
                             task.description,
-                            style: TextStyle(fontSize: 14, color: onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: onSurfaceVariant,
+                            ),
                           ),
                         ],
                         if (_expanded) ...[

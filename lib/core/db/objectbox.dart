@@ -4,13 +4,14 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class ObjectBox {
-
   ObjectBox._create(this.store);
   late final Store store;
 
   static Future<ObjectBox> create() async {
     final docsDir = await getApplicationDocumentsDirectory();
-    final store = await openStore(directory: p.join(docsDir.path, 'obx-memories'));
+    final store = await openStore(
+      directory: p.join(docsDir.path, 'obx-memories'),
+    );
     return ObjectBox._create(store);
   }
 }

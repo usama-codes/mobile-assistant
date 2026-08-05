@@ -8,29 +8,39 @@ import 'package:mobile_assistant/features/memory/presentation/providers/memory_p
 import 'package:mobile_assistant/features/tasks/data/task_repository.dart';
 
 class AgentService {
-
   AgentService(this.registry);
   final ToolRegistry registry;
 
   Tool getTools() {
-    return Tool(functionDeclarations: [
-      FunctionDeclaration(
-        'create_execution_plan',
-        'State a multi-step execution plan before executing complex requests',
-        Schema(SchemaType.object, properties: {
-          'steps': Schema(SchemaType.array, items: Schema(SchemaType.string)),
-        }, requiredProperties: ['steps']),
-      ),
-      FunctionDeclaration(
-        'ask_user',
-        'Ask the user a clarifying question to resolve ambiguity',
-        Schema(SchemaType.object, properties: {
-          'question': Schema(SchemaType.string),
-        }, requiredProperties: ['question']),
-      ),
-      // Aggregate from registry
-      ...registry.allTools.expand((tool) => tool.declarations)
-    ]);
+    return Tool(
+      functionDeclarations: [
+        FunctionDeclaration(
+          'create_execution_plan',
+          'State a multi-step execution plan before executing complex requests',
+          Schema(
+            SchemaType.object,
+            properties: {
+              'steps': Schema(
+                SchemaType.array,
+                items: Schema(SchemaType.string),
+              ),
+            },
+            requiredProperties: ['steps'],
+          ),
+        ),
+        FunctionDeclaration(
+          'ask_user',
+          'Ask the user a clarifying question to resolve ambiguity',
+          Schema(
+            SchemaType.object,
+            properties: {'question': Schema(SchemaType.string)},
+            requiredProperties: ['question'],
+          ),
+        ),
+        // Aggregate from registry
+        ...registry.allTools.expand((tool) => tool.declarations),
+      ],
+    );
   }
 
   Future<Map<String, Object?>> dispatchFunctionCall(FunctionCall call) async {

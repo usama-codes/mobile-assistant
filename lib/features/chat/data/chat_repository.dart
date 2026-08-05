@@ -13,7 +13,6 @@ ChatRepository chatRepository(Ref ref) {
 }
 
 class ChatRepository {
-
   ChatRepository(this._db);
   final AppDatabase _db;
 
@@ -29,24 +28,28 @@ class ChatRepository {
   }
 
   Future<dom.ChatSession> insertSession(dom.ChatSession session) async {
-    final id = await _db.into(_db.chatSessions).insert(
-      ChatSessionsCompanion.insert(
-        title: Value(session.title),
-        createdAt: Value(session.createdAt.toIso8601String()),
-      ),
-    );
+    final id = await _db
+        .into(_db.chatSessions)
+        .insert(
+          ChatSessionsCompanion.insert(
+            title: Value(session.title),
+            createdAt: Value(session.createdAt.toIso8601String()),
+          ),
+        );
     session.id = id;
     return session;
   }
 
   Future<void> updateSession(dom.ChatSession session) async {
-    await _db.update(_db.chatSessions).replace(
-      ChatSession(
-        id: session.id!,
-        title: session.title,
-        createdAt: session.createdAt.toIso8601String(),
-      ),
-    );
+    await _db
+        .update(_db.chatSessions)
+        .replace(
+          ChatSession(
+            id: session.id!,
+            title: session.title,
+            createdAt: session.createdAt.toIso8601String(),
+          ),
+        );
   }
 
   Future<void> deleteSession(int id) async {
@@ -56,34 +59,40 @@ class ChatRepository {
   }
 
   Stream<List<dom.ChatMessage>> watchMessages(int sessionId) {
-    final query = _db.select(_db.messages)..where((m) => m.sessionId.equals(sessionId));
+    final query = _db.select(_db.messages)
+      ..where((m) => m.sessionId.equals(sessionId));
     return query.watch().map((rows) {
       return rows.map((row) => row.toDomain()).toList();
     });
   }
 
   Future<List<dom.ChatMessage>> getMessages(int sessionId) async {
-    final query = _db.select(_db.messages)..where((m) => m.sessionId.equals(sessionId));
+    final query = _db.select(_db.messages)
+      ..where((m) => m.sessionId.equals(sessionId));
     final rows = await query.get();
     return rows.map((row) => row.toDomain()).toList();
   }
 
   Future<dom.ChatMessage> insertMessage(dom.ChatMessage message) async {
-    final id = await _db.into(_db.messages).insert(
-      MessagesCompanion.insert(
-        sessionId: Value(message.sessionId),
-        content: Value(message.content),
-        isUser: Value(message.isUser ? 1 : 0),
-        timestamp: Value(message.timestamp.toIso8601String()),
-        attachmentPath: Value(message.attachmentPath),
-      ),
-    );
+    final id = await _db
+        .into(_db.messages)
+        .insert(
+          MessagesCompanion.insert(
+            sessionId: Value(message.sessionId),
+            content: Value(message.content),
+            isUser: Value(message.isUser ? 1 : 0),
+            timestamp: Value(message.timestamp.toIso8601String()),
+            attachmentPath: Value(message.attachmentPath),
+          ),
+        );
     message.id = id;
     return message;
   }
 
   Future<void> clearMessagesForSession(int sessionId) async {
-    await (_db.delete(_db.messages)..where((m) => m.sessionId.equals(sessionId))).go();
+    await (_db.delete(
+      _db.messages,
+    )..where((m) => m.sessionId.equals(sessionId))).go();
   }
 
   Future<void> deleteMessage(int id) async {
@@ -96,7 +105,9 @@ extension ChatSessionExtension on ChatSession {
     return dom.ChatSession(
       id: id,
       title: title ?? 'Untitled',
-      createdAt: createdAt != null ? DateTime.parse(createdAt!) : DateTime.now(),
+      createdAt: createdAt != null
+          ? DateTime.parse(createdAt!)
+          : DateTime.now(),
     );
   }
 }
@@ -107,7 +118,9 @@ extension MessageDataExtension on Message {
       sessionId: sessionId,
       content: content ?? '',
       isUser: isUser == 1,
-      timestamp: timestamp != null ? DateTime.parse(timestamp!) : DateTime.now(),
+      timestamp: timestamp != null
+          ? DateTime.parse(timestamp!)
+          : DateTime.now(),
       attachmentPath: attachmentPath,
     )..id = id;
   }

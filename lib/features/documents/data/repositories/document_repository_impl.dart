@@ -8,15 +8,19 @@ import 'package:mobile_assistant/features/documents/domain/models/document_item.
 import 'package:mobile_assistant/features/documents/domain/repositories/document_repository.dart';
 
 class DocumentRepositoryImpl implements DocumentRepository {
-
   DocumentRepositoryImpl(this._db);
   final AppDatabase _db;
 
   @override
   Future<List<DocumentItem>> getAllDocuments() async {
-    final results = await (_db.select(_db.documents)
-          ..orderBy([(t) => drift.OrderingTerm(expression: t.createdAt, mode: drift.OrderingMode.desc)]))
-        .get();
+    final results =
+        await (_db.select(_db.documents)..orderBy([
+              (t) => drift.OrderingTerm(
+                expression: t.createdAt,
+                mode: drift.OrderingMode.desc,
+              ),
+            ]))
+            .get();
 
     return results.map((row) {
       var tags = <String>[];
@@ -35,7 +39,9 @@ class DocumentRepositoryImpl implements DocumentRepository {
         originalSource: row.originalSource ?? '',
         documentType: row.documentType ?? 'text',
         filePath: row.filePath ?? '',
-        createdAt: DateTime.parse(row.createdAt ?? DateTime.now().toIso8601String()),
+        createdAt: DateTime.parse(
+          row.createdAt ?? DateTime.now().toIso8601String(),
+        ),
       );
     }).toList();
   }

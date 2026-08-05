@@ -32,18 +32,30 @@ class AppTheme {
 
   // ── Typography ────────────────────────────────────────────────────────────
   static TextTheme get _textTheme => GoogleFonts.manropeTextTheme().copyWith(
-        displayLarge: GoogleFonts.manrope(
-            fontSize: 32, fontWeight: FontWeight.w700, color: textPrimary),
-        titleLarge: GoogleFonts.manrope(
-            fontSize: 20, fontWeight: FontWeight.w600, color: textPrimary),
-        titleMedium: GoogleFonts.manrope(
-            fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary),
-        bodyLarge: GoogleFonts.manrope(fontSize: 15, color: textPrimary),
-        bodyMedium: GoogleFonts.manrope(fontSize: 14, color: textSecondary),
-        bodySmall: GoogleFonts.manrope(fontSize: 12, color: textSecondary),
-        labelSmall: GoogleFonts.manrope(
-            fontSize: 11, fontWeight: FontWeight.w500, color: textDisabled),
-      );
+    displayLarge: GoogleFonts.manrope(
+      fontSize: 32,
+      fontWeight: FontWeight.w700,
+      color: textPrimary,
+    ),
+    titleLarge: GoogleFonts.manrope(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      color: textPrimary,
+    ),
+    titleMedium: GoogleFonts.manrope(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: textPrimary,
+    ),
+    bodyLarge: GoogleFonts.manrope(fontSize: 15, color: textPrimary),
+    bodyMedium: GoogleFonts.manrope(fontSize: 14, color: textSecondary),
+    bodySmall: GoogleFonts.manrope(fontSize: 12, color: textSecondary),
+    labelSmall: GoogleFonts.manrope(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      color: textDisabled,
+    ),
+  );
 
   // ── Dark Theme ────────────────────────────────────────────────────────────
   static ThemeData get dark {
@@ -65,7 +77,11 @@ class AppTheme {
       ),
       textTheme: _textTheme,
       iconTheme: const IconThemeData(color: textSecondary, size: 22),
-      dividerTheme: const DividerThemeData(color: border, thickness: 1, space: 0),
+      dividerTheme: const DividerThemeData(
+        color: border,
+        thickness: 1,
+        space: 0,
+      ),
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
@@ -87,22 +103,33 @@ class AppTheme {
           borderSide: const BorderSide(color: accent, width: 1.5),
         ),
         hintStyle: GoogleFonts.manrope(color: textDisabled, fontSize: 14),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: accent,
           foregroundColor: background,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusM)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusM),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
+          textStyle: GoogleFonts.manrope(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accent,
-          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: GoogleFonts.manrope(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -110,7 +137,9 @@ class AppTheme {
         selectedColor: accentDim,
         side: const BorderSide(color: border),
         labelStyle: GoogleFonts.manrope(color: textSecondary, fontSize: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusPill)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusPill),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -123,13 +152,18 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: surfaceVariant,
         contentTextStyle: GoogleFonts.manrope(color: textPrimary, fontSize: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusM)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusM),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(color: accent),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? accent : Colors.transparent),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? accent
+              : Colors.transparent,
+        ),
         side: const BorderSide(color: border, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
@@ -160,16 +194,39 @@ class AppTheme {
         primary: accent,
         onPrimary: Colors.white,
       ),
-      textTheme: GoogleFonts.manropeTextTheme(ThemeData.light().textTheme).copyWith(
-        titleLarge: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w600, color: lightText),
-        titleMedium: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: lightText),
-        bodyLarge: GoogleFonts.manrope(fontSize: 15, color: lightText),
-        bodyMedium: GoogleFonts.manrope(fontSize: 14, color: lightTextSecondary),
-        bodySmall: GoogleFonts.manrope(fontSize: 12, color: lightTextSecondary),
-        labelSmall: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w500, color: lightTextSecondary),
-      ),
+      textTheme: GoogleFonts.manropeTextTheme(ThemeData.light().textTheme)
+          .copyWith(
+            titleLarge: GoogleFonts.manrope(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: lightText,
+            ),
+            titleMedium: GoogleFonts.manrope(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: lightText,
+            ),
+            bodyLarge: GoogleFonts.manrope(fontSize: 15, color: lightText),
+            bodyMedium: GoogleFonts.manrope(
+              fontSize: 14,
+              color: lightTextSecondary,
+            ),
+            bodySmall: GoogleFonts.manrope(
+              fontSize: 12,
+              color: lightTextSecondary,
+            ),
+            labelSmall: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: lightTextSecondary,
+            ),
+          ),
       iconTheme: const IconThemeData(color: lightTextSecondary, size: 22),
-      dividerTheme: const DividerThemeData(color: lightBorder, thickness: 1, space: 0),
+      dividerTheme: const DividerThemeData(
+        color: lightBorder,
+        thickness: 1,
+        space: 0,
+      ),
       cardTheme: CardThemeData(
         color: lightSurface,
         elevation: 0,
@@ -190,15 +247,26 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusM),
           borderSide: const BorderSide(color: accent, width: 1.5),
         ),
-        hintStyle: GoogleFonts.manrope(color: lightTextSecondary.withValues(alpha: 0.6), fontSize: 14),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: GoogleFonts.manrope(
+          color: lightTextSecondary.withValues(alpha: 0.6),
+          fontSize: 14,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: lightSurfaceVariant,
         selectedColor: accentDim,
         side: const BorderSide(color: lightBorder),
-        labelStyle: GoogleFonts.manrope(color: lightTextSecondary, fontSize: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusPill)),
+        labelStyle: GoogleFonts.manrope(
+          color: lightTextSecondary,
+          fontSize: 12,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusPill),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -206,15 +274,22 @@ class AppTheme {
           backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusM)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusM),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
+          textStyle: GoogleFonts.manrope(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: lightSurface,
         contentTextStyle: GoogleFonts.manrope(color: lightText, fontSize: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusM)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusM),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -231,11 +306,14 @@ class AppTheme {
   static Color priorityColor(dynamic priority) {
     final name = priority.toString().split('.').last.toLowerCase();
     switch (name) {
-      case 'low': return priorityLow;
-      case 'high': return priorityHigh;
-      case 'critical': return priorityCritical;
-      default: return priorityMedium;
+      case 'low':
+        return priorityLow;
+      case 'high':
+        return priorityHigh;
+      case 'critical':
+        return priorityCritical;
+      default:
+        return priorityMedium;
     }
   }
 }
-

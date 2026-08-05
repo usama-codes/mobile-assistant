@@ -21,9 +21,7 @@ void main() {
     testWidgets('renders empty state when no tasks exist', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            tasksProvider.overrideWith(() => MockTasksNotifier([])),
-          ],
+          overrides: [tasksProvider.overrideWith(() => MockTasksNotifier([]))],
           child: const MaterialApp(
             localizationsDelegates: [
               AppLocalizations.delegate,
@@ -31,9 +29,7 @@ void main() {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: [
-              Locale('en', ''),
-            ],
+            supportedLocales: [Locale('en', '')],
             home: TasksScreen(),
           ),
         ),
@@ -66,9 +62,7 @@ void main() {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: [
-              Locale('en', ''),
-            ],
+            supportedLocales: [Locale('en', '')],
             home: TasksScreen(),
           ),
         ),

@@ -44,11 +44,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     _inputCtrl.clear();
-    await ref.read(chatNotifierProvider.notifier).sendMessage(
-          text,
-          DateTime.now(),
-          isUser: true,
-        );
+    await ref
+        .read(chatNotifierProvider.notifier)
+        .sendMessage(text, DateTime.now(), isUser: true);
     _scrollToBottom();
   }
 
@@ -57,7 +55,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusL)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusL),
+        ),
       ),
       builder: (_) => SafeArea(
         child: Column(
@@ -65,7 +65,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             const SizedBox(height: 8),
             Container(
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.border,
                 borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -89,7 +90,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
     if (action == null || !mounted) return;
 
-    final source = action == 'gallery' ? ImageSource.gallery : ImageSource.camera;
+    final source = action == 'gallery'
+        ? ImageSource.gallery
+        : ImageSource.camera;
     final xfile = await _picker.pickImage(source: source, imageQuality: 85);
     if (xfile == null || !mounted) return;
 
@@ -125,13 +128,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (state.modelError != null)
             _ErrorBanner(
               message: state.modelError!,
-              onDismiss: () => ref.read(chatNotifierProvider.notifier).clearErrors(),
+              onDismiss: () =>
+                  ref.read(chatNotifierProvider.notifier).clearErrors(),
             ),
 
           // Message list
-          Expanded(
-            child: _buildMessageList(state),
-          ),
+          Expanded(child: _buildMessageList(state)),
 
           // Input bar
           ChatInputBar(
@@ -160,7 +162,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       surfaceTintColor: Colors.transparent,
       leading: Builder(
         builder: (ctx) => IconButton(
-          icon: Icon(Icons.menu_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          icon: Icon(
+            Icons.menu_rounded,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           tooltip: 'Chat sessions',
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
@@ -178,36 +183,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (state.isGenerating)
             Text(
               'Thinking…',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
         ],
       ),
       actions: [
         IconButton(
-          icon: Icon(Icons.add_comment_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          icon: Icon(
+            Icons.add_comment_outlined,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           tooltip: 'New chat',
           onPressed: () =>
               ref.read(chatNotifierProvider.notifier).createNewSession(),
         ),
         PopupMenuButton<String>(
-          icon: Icon(Icons.more_vert_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          icon: Icon(
+            Icons.more_vert_rounded,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           color: Theme.of(context).cardColor,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radiusM)),
+            borderRadius: BorderRadius.circular(AppTheme.radiusM),
+          ),
           onSelected: (v) async {
             if (v == 'clear') {
               ref.read(chatNotifierProvider.notifier).clearChat();
             } else if (v == 'delete' && state.currentSession?.id != null) {
-              ref.read(chatNotifierProvider.notifier)
+              ref
+                  .read(chatNotifierProvider.notifier)
                   .deleteSession(state.currentSession!.id!);
             }
           },
           itemBuilder: (_) => [
             _menuItem('clear', Icons.delete_sweep_outlined, 'Clear messages'),
-            _menuItem('delete', Icons.delete_forever_outlined, 'Delete session'),
+            _menuItem(
+              'delete',
+              Icons.delete_forever_outlined,
+              'Delete session',
+            ),
           ],
         ),
       ],
@@ -219,10 +235,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 10),
-          Text(label,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     );
@@ -270,7 +295,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 }
 
 class _ChatItem {
-
   const _ChatItem._({this.message, this.step, this.isTyping = false});
   factory _ChatItem.message(ChatMessage m) => _ChatItem._(message: m);
   factory _ChatItem.step(AgentStep s) => _ChatItem._(step: s);
@@ -298,16 +322,24 @@ class _SessionDrawer extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
               child: Row(
                 children: [
-                  const Icon(Icons.history_rounded, color: AppTheme.accent, size: 20),
+                  const Icon(
+                    Icons.history_rounded,
+                    color: AppTheme.accent,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
-                  Text('Chat History',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Chat History',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const Spacer(),
                   TextButton.icon(
                     icon: const Icon(Icons.add_rounded, size: 16),
                     label: const Text('New'),
                     onPressed: () {
-                      ref.read(chatNotifierProvider.notifier).createNewSession();
+                      ref
+                          .read(chatNotifierProvider.notifier)
+                          .createNewSession();
                       Navigator.pop(context);
                     },
                   ),
@@ -317,42 +349,66 @@ class _SessionDrawer extends ConsumerWidget {
             const Divider(height: 1),
             Expanded(
               child: state.sessions.isEmpty
-                  ? Center(child: Text('No sessions', style: TextStyle(color: Theme.of(context).disabledColor)))
+                  ? Center(
+                      child: Text(
+                        'No sessions',
+                        style: TextStyle(
+                          color: Theme.of(context).disabledColor,
+                        ),
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: state.sessions.length,
                       itemBuilder: (_, i) {
                         final session = state.sessions[i];
-                        final isCurrent = session.id == state.currentSession?.id;
+                        final isCurrent =
+                            session.id == state.currentSession?.id;
                         return ListTile(
                           leading: Icon(
                             Icons.chat_bubble_outline_rounded,
                             size: 18,
-                            color: isCurrent ? AppTheme.accent : Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: isCurrent
+                                ? AppTheme.accent
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                           ),
                           title: Text(
                             session.title,
                             style: TextStyle(
-                              color: isCurrent ? AppTheme.accent : Theme.of(context).colorScheme.onSurface,
-                              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                              color: isCurrent
+                                  ? AppTheme.accent
+                                  : Theme.of(context).colorScheme.onSurface,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                               fontSize: 14,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           selected: isCurrent,
-                          selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+                          selectedTileColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
                           onTap: () {
-                            ref.read(chatNotifierProvider.notifier).switchSession(session);
+                            ref
+                                .read(chatNotifierProvider.notifier)
+                                .switchSession(session);
                             Navigator.pop(context);
                           },
                           trailing: isCurrent
                               ? null
                               : IconButton(
-                                  icon: Icon(Icons.delete_outline_rounded,
-                                      size: 16, color: Theme.of(context).disabledColor),
+                                  icon: Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: 16,
+                                    color: Theme.of(context).disabledColor,
+                                  ),
                                   onPressed: () {
                                     if (session.id != null) {
-                                      ref.read(chatNotifierProvider.notifier)
+                                      ref
+                                          .read(chatNotifierProvider.notifier)
                                           .deleteSession(session.id!);
                                     }
                                   },
@@ -375,10 +431,19 @@ class _EmptyChatState extends StatelessWidget {
   final void Function(String) onSuggestion;
 
   static const List<Map<String, String>> _suggestions = [
-    {'label': 'Create a task', 'text': 'Create a task for me to finish the project report by Friday'},
-    {'label': 'Remember something', 'text': 'Remember that I prefer dark mode and early morning meetings'},
+    {
+      'label': 'Create a task',
+      'text': 'Create a task for me to finish the project report by Friday',
+    },
+    {
+      'label': 'Remember something',
+      'text': 'Remember that I prefer dark mode and early morning meetings',
+    },
     {'label': 'Quick question', 'text': 'What tasks do I have due today?'},
-    {'label': 'Scan document', 'text': 'I want to save a document to my knowledge base'},
+    {
+      'label': 'Scan document',
+      'text': 'I want to save a document to my knowledge base',
+    },
   ];
 
   @override
@@ -396,8 +461,11 @@ class _EmptyChatState extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.auto_awesome_rounded,
-                  size: 28, color: Theme.of(context).colorScheme.primary),
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                size: 28,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -443,20 +511,28 @@ class _ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              size: 16, color: AppTheme.priorityCritical),
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 16,
+            color: AppTheme.priorityCritical,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
               style: const TextStyle(
-                  color: AppTheme.priorityCritical, fontSize: 13),
+                color: AppTheme.priorityCritical,
+                fontSize: 13,
+              ),
             ),
           ),
           GestureDetector(
             onTap: onDismiss,
-            child: const Icon(Icons.close_rounded,
-                size: 16, color: AppTheme.priorityCritical),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 16,
+              color: AppTheme.priorityCritical,
+            ),
           ),
         ],
       ),
@@ -467,7 +543,11 @@ class _ErrorBanner extends StatelessWidget {
 // ── Bottom Sheet Option Row ────────────────────────────────────────────────
 
 class _SheetOption extends StatelessWidget {
-  const _SheetOption({required this.icon, required this.label, required this.value});
+  const _SheetOption({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
   final IconData icon;
   final String label;
   final String value;
@@ -475,12 +555,19 @@ class _SheetOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
-      title: Text(label,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        size: 22,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 15,
+        ),
+      ),
       onTap: () => Navigator.pop(context, value),
     );
   }
 }
-
-

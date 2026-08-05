@@ -18,9 +18,7 @@ void main() {
     setUp(() {
       mockRepo = MockTaskRepository();
       container = ProviderContainer(
-        overrides: [
-          taskRepositoryProvider.overrideWithValue(mockRepo),
-        ],
+        overrides: [taskRepositoryProvider.overrideWithValue(mockRepo)],
       );
     });
 
@@ -30,7 +28,7 @@ void main() {
 
     test('build() filters out completed tasks and sorts correctly', () async {
       final now = DateTime.now();
-      
+
       final task1 = TaskItem(
         title: 'Task 1 (Completed)',
         description: '',
@@ -63,9 +61,9 @@ void main() {
         priority: Priority.low,
       )..id = 4;
 
-      when(() => mockRepo.watchTasks()).thenAnswer(
-        (_) => Stream.value([task1, task2, task3, task4]),
-      );
+      when(
+        () => mockRepo.watchTasks(),
+      ).thenAnswer((_) => Stream.value([task1, task2, task3, task4]));
 
       final subscription = container.listen(
         tasksProvider,
@@ -75,12 +73,12 @@ void main() {
 
       // Read the current state of tasksProvider (which is an AsyncValue)
       final asyncValue = container.read(tasksProvider);
-      
+
       // We expect the state to eventually be data
       final tasks = await container.read(tasksProvider.future);
 
       expect(tasks.length, 3, reason: 'Completed task should be filtered out');
-      
+
       // Expected order:
       // 1. Task 4 (earliest due date: Today)
       // 2. Task 3 (Tomorrow, Critical priority)
@@ -88,7 +86,7 @@ void main() {
       expect(tasks[0].id, 4);
       expect(tasks[1].id, 3);
       expect(tasks[2].id, 2);
-      
+
       subscription.close();
     });
   });

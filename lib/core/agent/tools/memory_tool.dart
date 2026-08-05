@@ -11,25 +11,49 @@ class MemoryTool implements AgentTool {
     FunctionDeclaration(
       'remember_fact',
       'Save a fact or user preference to long-term memory',
-      Schema(SchemaType.object, properties: {
-        'fact': Schema(SchemaType.string, description: 'The fact to remember'),
-        'importance': Schema(SchemaType.number, description: '0.0 to 1.0, default 0.5'),
-        'is_sensitive': Schema(SchemaType.boolean, description: 'Encrypt if true'),
-      }, requiredProperties: ['fact']),
+      Schema(
+        SchemaType.object,
+        properties: {
+          'fact': Schema(
+            SchemaType.string,
+            description: 'The fact to remember',
+          ),
+          'importance': Schema(
+            SchemaType.number,
+            description: '0.0 to 1.0, default 0.5',
+          ),
+          'is_sensitive': Schema(
+            SchemaType.boolean,
+            description: 'Encrypt if true',
+          ),
+        },
+        requiredProperties: ['fact'],
+      ),
     ),
     FunctionDeclaration(
       'forget_fact',
       'Delete a previously saved memory by its id',
-      Schema(SchemaType.object, properties: {
-        'id': Schema(SchemaType.integer, description: 'Memory id to delete'),
-      }, requiredProperties: ['id']),
+      Schema(
+        SchemaType.object,
+        properties: {
+          'id': Schema(SchemaType.integer, description: 'Memory id to delete'),
+        },
+        requiredProperties: ['id'],
+      ),
     ),
     FunctionDeclaration(
       'search_memory',
       'Semantically search saved memories for a query',
-      Schema(SchemaType.object, properties: {
-        'query': Schema(SchemaType.string, description: 'Natural language query'),
-      }, requiredProperties: ['query']),
+      Schema(
+        SchemaType.object,
+        properties: {
+          'query': Schema(
+            SchemaType.string,
+            description: 'Natural language query',
+          ),
+        },
+        requiredProperties: ['query'],
+      ),
     ),
   ];
 
@@ -43,7 +67,8 @@ class MemoryTool implements AgentTool {
   String get name => 'memory_tool';
 
   @override
-  String get description => 'Store and retrieve semantic memories about the user using embeddings.';
+  String get description =>
+      'Store and retrieve semantic memories about the user using embeddings.';
 
   @override
   Future<String> execute(String action, Map<String, dynamic> parameters) async {
@@ -55,7 +80,11 @@ class MemoryTool implements AgentTool {
             ? (parameters['importance'] as num).toDouble()
             : 0.5;
         final isSensitive = parameters['is_sensitive'] == true;
-        await _repo.addMemory(fact, importance: importance, isSensitive: isSensitive);
+        await _repo.addMemory(
+          fact,
+          importance: importance,
+          isSensitive: isSensitive,
+        );
         return "Saved memory: '$fact'";
 
       case 'forget_fact':
@@ -70,7 +99,10 @@ class MemoryTool implements AgentTool {
         final results = await _repo.searchMemories(query);
         if (results.isEmpty) return 'No relevant memories found.';
         return results
-            .map((m) => '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}')
+            .map(
+              (m) =>
+                  '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}',
+            )
             .join('\n');
 
       default:
@@ -82,7 +114,10 @@ class MemoryTool implements AgentTool {
     final results = await _repo.searchMemories(query);
     if (results.isEmpty) return 'No relevant memories found.';
     return results
-        .map((m) => '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}')
+        .map(
+          (m) =>
+              '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}',
+        )
         .join('\n');
   }
 }

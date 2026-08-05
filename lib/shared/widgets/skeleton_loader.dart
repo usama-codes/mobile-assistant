@@ -19,8 +19,9 @@ class _ChatMessageSkeletonState extends State<ChatMessageSkeleton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
@@ -42,8 +43,9 @@ class _ChatMessageSkeletonState extends State<ChatMessageSkeleton>
       child: AnimatedBuilder(
         animation: _anim,
         builder: (_, _) => Column(
-          crossAxisAlignment:
-              widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: widget.isUser
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             _bar(120 + 40 * _anim.value, 14),
             const SizedBox(height: 6),
@@ -82,8 +84,9 @@ class _TaskRowSkeletonState extends State<TaskRowSkeleton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -101,7 +104,8 @@ class _TaskRowSkeletonState extends State<TaskRowSkeleton>
         child: Row(
           children: [
             Container(
-              width: 20, height: 20,
+              width: 20,
+              height: 20,
               decoration: BoxDecoration(
                 color: AppTheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(4),
@@ -116,16 +120,18 @@ class _TaskRowSkeletonState extends State<TaskRowSkeleton>
                     height: 14,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                        color: AppTheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusS)),
+                      color: AppTheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Container(
                     height: 11,
                     width: 80,
                     decoration: BoxDecoration(
-                        color: AppTheme.border,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusS)),
+                      color: AppTheme.border,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                    ),
                   ),
                 ],
               ),

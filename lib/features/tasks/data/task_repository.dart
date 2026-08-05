@@ -12,7 +12,10 @@ class TaskRepository {
   final AppDatabase _db;
 
   Stream<List<TaskItem>> watchTasks() {
-    return _db.select(_db.tasks).watch().map((tasks) => tasks.map((t) => t.toDomain()).toList());
+    return _db
+        .select(_db.tasks)
+        .watch()
+        .map((tasks) => tasks.map((t) => t.toDomain()).toList());
   }
 
   Future<List<TaskItem>> getAllTasks() async {
@@ -21,32 +24,36 @@ class TaskRepository {
   }
 
   Future<int> insertTask(TaskItem task) {
-    return _db.into(_db.tasks).insert(
-      TasksCompanion.insert(
-        title: Value(task.title),
-        description: Value(task.description),
-        dueDate: Value(task.dueDate.toIso8601String()),
-        completed: Value(task.completed ? 1 : 0),
-        priority: Value(task.priority.name),
-        recurrenceRule: Value(task.recurrenceRule),
-        lastCompletedAt: Value(task.lastCompletedAt?.toIso8601String()),
-      ),
-    );
+    return _db
+        .into(_db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: Value(task.title),
+            description: Value(task.description),
+            dueDate: Value(task.dueDate.toIso8601String()),
+            completed: Value(task.completed ? 1 : 0),
+            priority: Value(task.priority.name),
+            recurrenceRule: Value(task.recurrenceRule),
+            lastCompletedAt: Value(task.lastCompletedAt?.toIso8601String()),
+          ),
+        );
   }
 
   Future<bool> updateTask(TaskItem task) {
-    return _db.update(_db.tasks).replace(
-      TasksCompanion(
-        id: Value(task.id!),
-        title: Value(task.title),
-        description: Value(task.description),
-        dueDate: Value(task.dueDate.toIso8601String()),
-        completed: Value(task.completed ? 1 : 0),
-        priority: Value(task.priority.name),
-        recurrenceRule: Value(task.recurrenceRule),
-        lastCompletedAt: Value(task.lastCompletedAt?.toIso8601String()),
-      ),
-    );
+    return _db
+        .update(_db.tasks)
+        .replace(
+          TasksCompanion(
+            id: Value(task.id!),
+            title: Value(task.title),
+            description: Value(task.description),
+            dueDate: Value(task.dueDate.toIso8601String()),
+            completed: Value(task.completed ? 1 : 0),
+            priority: Value(task.priority.name),
+            recurrenceRule: Value(task.recurrenceRule),
+            lastCompletedAt: Value(task.lastCompletedAt?.toIso8601String()),
+          ),
+        );
   }
 
   Future<int> deleteTask(int id) {
@@ -62,10 +69,15 @@ extension TaskMapper on Task {
       dueDate: dueDate != null ? DateTime.parse(dueDate!) : DateTime.now(),
       completed: completed == 1,
       priority: priority != null
-          ? Priority.values.firstWhere((e) => e.name == priority, orElse: () => Priority.medium)
+          ? Priority.values.firstWhere(
+              (e) => e.name == priority,
+              orElse: () => Priority.medium,
+            )
           : Priority.medium,
       recurrenceRule: recurrenceRule,
-      lastCompletedAt: lastCompletedAt != null ? DateTime.tryParse(lastCompletedAt!) : null,
+      lastCompletedAt: lastCompletedAt != null
+          ? DateTime.tryParse(lastCompletedAt!)
+          : null,
     )..id = id;
   }
 }

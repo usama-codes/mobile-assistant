@@ -13,16 +13,16 @@ void main() {
         'completed': 0,
         'priority': 'high',
       };
-      
+
       final task = TaskItem.fromMap(json);
       expect(task.id, 1);
       expect(task.title, 'Test');
       expect(task.completed, false);
-      
+
       final out = task.toMap();
       expect(out['priority'], 'high');
     });
-    
+
     test('ChatSession fromMap', () {
       final json = {
         'id': 1,
@@ -31,7 +31,7 @@ void main() {
         'updatedAt': '2023-01-01T00:00:00.000',
         'systemPrompt': 'Be helpful',
       };
-      
+
       final session = ChatSession.fromMap(json);
       expect(session.title, 'Session 1');
     });

@@ -29,7 +29,9 @@ class LockNotifier extends _$LockNotifier {
       return true;
     }
 
-    final didAuthenticate = await repo.authenticate('Please authenticate to access Mobile Assistant');
+    final didAuthenticate = await repo.authenticate(
+      'Please authenticate to access Mobile Assistant',
+    );
     return didAuthenticate;
   }
 }

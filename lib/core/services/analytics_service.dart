@@ -5,12 +5,11 @@ import 'package:logger/logger.dart';
 
 final logger = Logger(
   printer: PrettyPrinter(
-    printTime: false // Should each log print contain a timestamp
+    printTime: false, // Should each log print contain a timestamp
   ),
 );
 
 class AnalyticsService {
-
   factory AnalyticsService() {
     return _instance;
   }
@@ -22,11 +21,17 @@ class AnalyticsService {
 
   Future<void> logEvent(String name, {Map<String, dynamic>? parameters}) async {
     try {
-      final safeParams = parameters?.map((key, value) => MapEntry(key, value as Object));
+      final safeParams = parameters?.map(
+        (key, value) => MapEntry(key, value as Object),
+      );
       // await _analytics.logEvent(name: name, parameters: safeParams);
       logger.i('Analytics Event: $name | Params: $parameters');
     } catch (e, stackTrace) {
-      logger.e('Failed to log analytics event', error: e, stackTrace: stackTrace);
+      logger.e(
+        'Failed to log analytics event',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -45,7 +50,12 @@ class AnalyticsService {
     }
   }
 
-  void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
+  void recordError(
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    bool fatal = false,
+  }) {
     logger.e('Recorded Error: $reason', error: exception, stackTrace: stack);
     if (!kIsWeb) {
       // FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
@@ -53,17 +63,24 @@ class AnalyticsService {
   }
 
   void recordFlutterFatalError(FlutterErrorDetails flutterErrorDetails) {
-    logger.f('Fatal Flutter Error', error: flutterErrorDetails.exception, stackTrace: flutterErrorDetails.stack);
+    logger.f(
+      'Fatal Flutter Error',
+      error: flutterErrorDetails.exception,
+      stackTrace: flutterErrorDetails.stack,
+    );
     if (!kIsWeb) {
       // FirebaseCrashlytics.instance.recordFlutterFatalError(flutterErrorDetails);
     }
   }
 
   void recordFlutterError(FlutterErrorDetails flutterErrorDetails) {
-    logger.e('Flutter Error', error: flutterErrorDetails.exception, stackTrace: flutterErrorDetails.stack);
+    logger.e(
+      'Flutter Error',
+      error: flutterErrorDetails.exception,
+      stackTrace: flutterErrorDetails.stack,
+    );
     if (!kIsWeb) {
       // FirebaseCrashlytics.instance.recordFlutterError(flutterErrorDetails);
     }
   }
 }
-

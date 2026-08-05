@@ -30,7 +30,7 @@ Future<void> main() async {
   } catch (e) {
     logger.e('Could not load .env file', error: e);
   }
-  
+
   // try {
   //   await Firebase.initializeApp();
   //   FlutterError.onError = AnalyticsService().recordFlutterFatalError;
@@ -39,12 +39,10 @@ Future<void> main() async {
   // }
 
   final objectBox = await ObjectBox.create();
-  
+
   runApp(
     ProviderScope(
-      overrides: [
-        objectBoxProvider.overrideWithValue(objectBox),
-      ],
+      overrides: [objectBoxProvider.overrideWithValue(objectBox)],
       child: const MyApp(),
     ),
   );
@@ -52,8 +50,9 @@ Future<void> main() async {
 
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
-  
-  static _MyAppState of(BuildContext context) => context.findAncestorStateOfType<_MyAppState>()!;
+
+  static _MyAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>()!;
 
   @override
   ConsumerState<MyApp> createState() => _MyAppState();
@@ -77,10 +76,12 @@ class _MyAppState extends ConsumerState<MyApp> {
       orElse: () => _themeMode,
     );
     // Enforce immersive dark status bar
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarBrightness: Brightness.dark,
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Mobile Assistant',
@@ -93,11 +94,8 @@ class _MyAppState extends ConsumerState<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('ur'),
-      ],
-      home: InferenceService.instance.isLocalModelLoaded 
+      supportedLocales: const [Locale('en'), Locale('ur')],
+      home: InferenceService.instance.isLocalModelLoaded
           ? const LockScreen()
           : const OnboardingScreen(),
     );
@@ -138,16 +136,31 @@ class _HomePageState extends State<HomePage> {
 // ── Floating Pill Navigation Bar ──────────────────────────────────────────
 
 class _PillNav extends StatelessWidget {
-
   const _PillNav({required this.currentIndex, required this.onTap});
   final int currentIndex;
   final void Function(int) onTap;
 
   static const List<Map<String, Object?>> _items = [
-    {'active': Icons.chat_bubble_rounded, 'inactive': Icons.chat_bubble_outline_rounded, 'label': 'Chat'},
-    {'active': Icons.check_circle_rounded, 'inactive': Icons.check_circle_outline_rounded, 'label': 'Tasks'},
-    {'active': Icons.lock_rounded, 'inactive': Icons.lock_outline_rounded, 'label': 'Vault'},
-    {'active': Icons.settings_rounded, 'inactive': Icons.settings_outlined, 'label': 'Settings'},
+    {
+      'active': Icons.chat_bubble_rounded,
+      'inactive': Icons.chat_bubble_outline_rounded,
+      'label': 'Chat',
+    },
+    {
+      'active': Icons.check_circle_rounded,
+      'inactive': Icons.check_circle_outline_rounded,
+      'label': 'Tasks',
+    },
+    {
+      'active': Icons.lock_rounded,
+      'inactive': Icons.lock_outline_rounded,
+      'label': 'Vault',
+    },
+    {
+      'active': Icons.settings_rounded,
+      'inactive': Icons.settings_outlined,
+      'label': 'Settings',
+    },
   ];
 
   @override
@@ -192,7 +205,9 @@ class _PillNav extends StatelessWidget {
                                 : (item['inactive']! as IconData),
                             key: ValueKey(selected),
                             size: 22,
-                            color: selected ? AppTheme.accent : Theme.of(context).disabledColor,
+                            color: selected
+                                ? AppTheme.accent
+                                : Theme.of(context).disabledColor,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -221,4 +236,3 @@ class _PillNav extends StatelessWidget {
     );
   }
 }
-

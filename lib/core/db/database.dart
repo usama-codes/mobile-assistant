@@ -55,7 +55,9 @@ class InteractionLogs extends Table {
   TextColumn get timestamp => text().nullable()();
 }
 
-@DriftDatabase(tables: [Tasks, ChatSessions, Messages, Documents, InteractionLogs])
+@DriftDatabase(
+  tables: [Tasks, ChatSessions, Messages, Documents, InteractionLogs],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -94,7 +96,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getDatabasesPath();
     final file = File(p.join(dbFolder, 'app.db'));
-    
+
     // We are migrating from sqflite. Sqflite stores databases in getDatabasesPath.
     // For Drift with Native, we just point to the same file.
     return NativeDatabase.createInBackground(file);
@@ -117,5 +119,3 @@ Future<String> getDatabasesPath() async {
   final dir = await getApplicationDocumentsDirectory();
   return dir.path;
 }
-
-

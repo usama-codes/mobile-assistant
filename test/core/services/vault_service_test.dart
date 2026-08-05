@@ -16,10 +16,10 @@ void main() {
     test('Encrypt and decrypt a string', () async {
       const plaintext = 'Secret message 123!';
       final encrypted = await VaultService.instance.encrypt(plaintext);
-      
+
       expect(encrypted, isNot(plaintext));
       expect(VaultService.instance.isEncrypted(encrypted), isTrue);
-      
+
       final decrypted = await VaultService.instance.decrypt(encrypted);
       expect(decrypted, plaintext);
     });
@@ -35,27 +35,30 @@ void main() {
       expect(decrypted, plaintext);
     });
 
-    test('Different encryptions of the same text produce different ciphertexts (nonce works)', () async {
-      const plaintext = 'Same text';
-      final encrypted1 = await VaultService.instance.encrypt(plaintext);
-      final encrypted2 = await VaultService.instance.encrypt(plaintext);
-      
-      expect(encrypted1, isNot(encrypted2));
-      
-      final decrypted1 = await VaultService.instance.decrypt(encrypted1);
-      final decrypted2 = await VaultService.instance.decrypt(encrypted2);
-      
-      expect(decrypted1, plaintext);
-      expect(decrypted2, plaintext);
-    });
-    
+    test(
+      'Different encryptions of the same text produce different ciphertexts (nonce works)',
+      () async {
+        const plaintext = 'Same text';
+        final encrypted1 = await VaultService.instance.encrypt(plaintext);
+        final encrypted2 = await VaultService.instance.encrypt(plaintext);
+
+        expect(encrypted1, isNot(encrypted2));
+
+        final decrypted1 = await VaultService.instance.decrypt(encrypted1);
+        final decrypted2 = await VaultService.instance.decrypt(encrypted2);
+
+        expect(decrypted1, plaintext);
+        expect(decrypted2, plaintext);
+      },
+    );
+
     test('Tampering with ciphertext throws error', () async {
       const plaintext = 'Will be tampered';
       final encrypted = await VaultService.instance.encrypt(plaintext);
-      
+
       // Tamper with the end of the base64 string
       final tampered = '${encrypted.substring(0, encrypted.length - 2)}AA';
-      
+
       expect(
         () async => VaultService.instance.decrypt(tampered),
         throwsA(isA<Exception>()),

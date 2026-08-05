@@ -9,35 +9,47 @@ class NotificationService {
   NotificationService._internal();
   static final NotificationService instance = NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
     try {
       tz.initializeTimeZones();
 
-      const initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettingsAndroid = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
 
       const initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
       );
 
-      await _flutterLocalNotificationsPlugin.initialize(
-        initializationSettings,
-      );
+      await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
     } catch (e, st) {
-      logger.e('Failed to initialize NotificationService', error: e, stackTrace: st);
+      logger.e(
+        'Failed to initialize NotificationService',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
   Future<void> requestPermissions() async {
     if (Platform.isAndroid) {
-      await _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+      await _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
     }
   }
 
-  Future<void> scheduleTaskReminder(int taskId, String title, String body, DateTime scheduledDate) async {
+  Future<void> scheduleTaskReminder(
+    int taskId,
+    String title,
+    String body,
+    DateTime scheduledDate,
+  ) async {
     if (scheduledDate.isBefore(DateTime.now())) return;
 
     try {

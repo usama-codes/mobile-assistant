@@ -60,9 +60,10 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       // Check if file already exists in either location
       final appDocs = await getApplicationDocumentsDirectory();
       final legacyFilePath = p.join(appDocs.path, 'gemma-2b-it-cpu-int4.bin');
-      
+
       final task = DownloadTask(
-        url: 'https://github.com/usama-codes/gemma-model-hosting/releases/download/v1.0.0/gemma-2b-it-cpu-int4.bin',
+        url:
+            'https://github.com/usama-codes/gemma-model-hosting/releases/download/v1.0.0/gemma-2b-it-cpu-int4.bin',
         filename: 'gemma-2b-it-cpu-int4.bin',
         directory: 'models',
         baseDirectory: BaseDirectory.applicationSupport,
@@ -83,13 +84,22 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       if (finalFilePath == null) {
         // We MUST configure the notification for Android 14+ to allow a foreground service
         FileDownloader().configureNotification(
-          running: const TaskNotification('Downloading AI Model', 'Progress: {progress}%'),
-          complete: const TaskNotification('Model Downloaded', 'The AI model is ready.'),
+          running: const TaskNotification(
+            'Downloading AI Model',
+            'Progress: {progress}%',
+          ),
+          complete: const TaskNotification(
+            'Model Downloaded',
+            'The AI model is ready.',
+          ),
           error: const TaskNotification('Download Failed', 'Please try again.'),
-          paused: const TaskNotification('Download Paused', 'Waiting for connection...'),
+          paused: const TaskNotification(
+            'Download Paused',
+            'Waiting for connection...',
+          ),
           progressBar: true,
         );
-        
+
         // Start download
         bool downloadSuccess = false;
         await FileDownloader().download(
@@ -116,16 +126,15 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       await FlutterGemma.installModel(
         modelType: ModelType.gemmaIt,
         fileType: ModelFileType.binary,
-      )
-      .fromFile(finalFilePath)
-      .install();
+      ).fromFile(finalFilePath).install();
 
       InferenceService.instance.isLocalModelLoaded = true;
       state = state.copyWith(isDownloading: false, isComplete: true);
     } catch (e) {
       state = state.copyWith(
         isDownloading: false,
-        error: 'Download failed. Please check your connection and try again.\n\nDetails: $e',
+        error:
+            'Download failed. Please check your connection and try again.\n\nDetails: $e',
       );
     }
   }
