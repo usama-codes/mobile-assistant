@@ -1,17 +1,40 @@
-# mobile_assistant
+# Mobile Assistant
 
-A new Flutter project.
+A privacy-first Flutter AI assistant with encrypted local storage, long-term memory, task management, OCR, and biometric authentication.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- AI Chat Assistant (Google Gemini)
+- Multi-session conversations
+- Automatic chat titles
+- Agent reasoning pipeline
+- OCR from images
+- Smart task management
+- Priority & deadline sorting
+- Encrypted document storage
+- Encrypted long-term memory
+- SQLite local database
+- Biometric authentication
+- Secure keystore/keychain storage
+- Light, Dark & System themes
+- Encrypted ZIP backups
+- Local data cleanup
 
-A few resources to get you started if this is your first Flutter project:
+## Tech Stack
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Flutter
+- Dart
+- MVVM Architecture
+- Google Gemini API
+- SQLite
+- flutter_secure_storage
+- local_auth
+- Cryptography
+- OCR
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Privacy
+
+- Local-first
+- On-device encryption
+- Secure biometric lock
+- No cloud dependency
