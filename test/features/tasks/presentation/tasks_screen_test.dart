@@ -16,62 +16,48 @@ class MockTasksNotifier extends TasksNotifier {
   Stream<List<TaskItem>> build() => Stream.value(tasks);
 }
 
+Widget _buildApp(List<TaskItem> tasks) {
+  return ProviderScope(
+    overrides: [tasksProvider.overrideWith(() => MockTasksNotifier(tasks))],
+    child: const MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [Locale('en', '')],
+      home: TasksScreen(),
+    ),
+  );
+}
+
 void main() {
   group('TasksScreen Widget Tests', () {
     testWidgets('renders empty state when no tasks exist', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [tasksProvider.overrideWith(() => MockTasksNotifier([]))],
-          child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: [Locale('en', '')],
-            home: TasksScreen(),
-          ),
-        ),
-      );
-
-      // Need to wait for AsyncValue to yield data
+      await tester.pumpWidget(_buildApp([]));
       await tester.pumpAndSettle();
 
-      expect(find.text('No tasks yet'), findsOneWidget);
+      // Empty state shows 'Nothing due' (not 'No tasks yet')
+      expect(find.text('Nothing due'), findsOneWidget);
     });
 
     testWidgets('renders a list of tasks', (tester) async {
       final task1 = TaskItem(
         title: 'Mock Task 1',
         description: 'Description',
-        dueDate: DateTime.now().add(const Duration(days: 1)),
+        // Use a future date to land in 'Later' bucket
+        dueDate: DateTime.now().add(const Duration(days: 30)),
         completed: false,
         priority: Priority.high,
       )..id = 1;
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            tasksProvider.overrideWith(() => MockTasksNotifier([task1])),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: [Locale('en', '')],
-            home: TasksScreen(),
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(_buildApp([task1]));
       await tester.pumpAndSettle();
 
       expect(find.text('Mock Task 1'), findsOneWidget);
-      expect(find.text('ACTIVE TASKS'), findsOneWidget);
+      // Tasks are grouped under 'Today', 'This Week', or 'Later'
+      expect(find.text('Later'), findsOneWidget);
     });
   });
 }
