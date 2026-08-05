@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mobile_assistant/core/agent/agent_tool.dart';
@@ -138,8 +140,9 @@ class DocumentTool implements AgentTool {
 
         // BUG FIX: embed actual document content, not a broken escape sequence
         var textToEmbed = content.toString();
-        if (textToEmbed.length > 2000)
+        if (textToEmbed.length > 2000) {
           textToEmbed = textToEmbed.substring(0, 2000);
+        }
         final embedding = await EmbeddingService.getEmbedding(textToEmbed);
         final embeddingStr = jsonEncode(embedding);
 
@@ -204,8 +207,9 @@ class DocumentTool implements AgentTool {
         final operation = parameters['operation'];
         final language = parameters['language'];
 
-        if (id == null || operation == null)
+        if (id == null || operation == null) {
           return "Missing 'id' or 'operation'.";
+        }
 
         final results = await db.query(
           'documents',
@@ -252,14 +256,15 @@ class DocumentTool implements AgentTool {
             response = await model.generateContent([Content.text(prompt)]);
             break;
           } catch (e) {
-            print('NLP Model $modelName failed: $e');
+            debugPrint('NLP Model $modelName failed: $e');
           }
         }
 
         final generatedText = response?.text?.trim() ?? '';
 
-        if (generatedText.isEmpty)
+        if (generatedText.isEmpty) {
           return 'NLP operation failed to generate content.';
+        }
 
         final newTitle = "$operation result for: ${doc['title']}";
         return execute('create_document', {

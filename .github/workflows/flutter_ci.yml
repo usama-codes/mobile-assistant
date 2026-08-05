@@ -27,14 +27,14 @@ jobs:
     - name: Get Dependencies
       run: flutter pub get
       
+    - name: Create dummy .env
+      run: touch .env
+
     - name: Format
       run: dart format .
       
     - name: Analyze
       run: flutter analyze --no-fatal-infos
       
-    - name: Create dummy .env
-      run: touch .env
-
     - name: Run Tests
       run: flutter test

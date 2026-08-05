@@ -58,100 +58,94 @@ class SettingsScreen extends ConsumerWidget {
                     theme,
                     AppLocalizations.of(context)!.preferences.toUpperCase(),
                   ),
-                  Container(
-                    child: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      children: [
-                        _buildThemeSelector(context, ref, theme, state),
-                      ],
+                  ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
+                    children: [_buildThemeSelector(context, ref, theme, state)],
                   ),
 
                   _buildSectionHeader(
                     theme,
                     AppLocalizations.of(context)!.inferenceModel.toUpperCase(),
                   ),
-                  Container(
-                    child: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      children: [
-                        _buildSettingCard(
-                          theme: theme,
-                          icon: Icons.memory,
-                          title: 'Inference Strategy',
-                          subtitle: 'Choose between Cloud, Local, or Hybrid',
-                          trailing: DropdownButton<String>(
-                            value: state.inferenceStrategy,
-                            underline: const SizedBox(),
-                            onChanged: (newValue) {
-                              if (newValue != null) {
-                                ref
-                                    .read(settingsProvider.notifier)
-                                    .setInferenceStrategy(newValue);
-                              }
-                            },
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'cloud',
-                                child: Text('Cloud Only'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'local',
-                                child: Text('Local Only'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'hybrid',
-                                child: Text('Hybrid'),
-                              ),
-                            ],
-                          ),
+                  ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    children: [
+                      _buildSettingCard(
+                        theme: theme,
+                        icon: Icons.memory,
+                        title: 'Inference Strategy',
+                        subtitle: 'Choose between Cloud, Local, or Hybrid',
+                        trailing: DropdownButton<String>(
+                          value: state.inferenceStrategy,
+                          underline: const SizedBox(),
+                          onChanged: (newValue) {
+                            if (newValue != null) {
+                              ref
+                                  .read(settingsProvider.notifier)
+                                  .setInferenceStrategy(newValue);
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'cloud',
+                              child: Text('Cloud Only'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'local',
+                              child: Text('Local Only'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'hybrid',
+                              child: Text('Hybrid'),
+                            ),
+                          ],
                         ),
-                        if (state.inferenceStrategy == 'local' &&
-                            !InferenceService.instance.isLocalModelLoaded)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.orange.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.warning_amber_rounded,
-                                    color: Colors.orange,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Local Gemma model not found. Place a compatible .bin or .task model file in the app storage, or switch to Hybrid/Cloud mode.',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                      ),
+                      if (state.inferenceStrategy == 'local' &&
+                          !InferenceService.instance.isLocalModelLoaded)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.orange.withValues(alpha: 0.4),
                               ),
                             ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.orange,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Local Gemma model not found. Place a compatible .bin or .task model file in the app storage, or switch to Hybrid/Cloud mode.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
 
                   // Local Model Status & Instructions
@@ -251,66 +245,64 @@ class SettingsScreen extends ConsumerWidget {
                     theme,
                     AppLocalizations.of(context)!.privacySecurity.toUpperCase(),
                   ),
-                  Container(
-                    child: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      children: [
-                        _buildSettingCard(
-                          theme: theme,
-                          icon: Icons.fingerprint,
-                          title: AppLocalizations.of(context)!.appLock,
-                          subtitle: 'Require authentication on startup',
-                          trailing: Switch(
-                            value: state.isAppLockEnabled,
-                            onChanged: (v) => ref
-                                .read(settingsProvider.notifier)
-                                .toggleAppLock(v),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSettingCard(
-                          theme: theme,
-                          icon: Icons.download_outlined,
-                          title: 'Export Data',
-                          subtitle: 'Save a backup of your DB and documents',
-                          trailing: const Icon(Icons.share, size: 20),
-                          onTap: () async {
-                            try {
-                              final path = await ref
-                                  .read(settingsProvider.notifier)
-                                  .exportData();
-                              // ignore: deprecated_member_use
-                              await Share.shareXFiles([
-                                XFile(path),
-                              ], text: 'Mobile Assistant Backup');
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(
-                                context,
-                              ).showSnackBar(const SnackBar(content: Text('')));
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSettingCard(
-                          theme: theme,
-                          icon: Icons.delete_forever,
-                          title: 'Delete All Data',
-                          subtitle: 'Wipe all local tasks, memories, documents',
-                          trailing: const Icon(
-                            Icons.warning,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          onTap: () => _showDeleteConfirm(context, ref),
-                        ),
-                      ],
+                  ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
+                    children: [
+                      _buildSettingCard(
+                        theme: theme,
+                        icon: Icons.fingerprint,
+                        title: AppLocalizations.of(context)!.appLock,
+                        subtitle: 'Require authentication on startup',
+                        trailing: Switch(
+                          value: state.isAppLockEnabled,
+                          onChanged: (v) => ref
+                              .read(settingsProvider.notifier)
+                              .toggleAppLock(v),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSettingCard(
+                        theme: theme,
+                        icon: Icons.download_outlined,
+                        title: 'Export Data',
+                        subtitle: 'Save a backup of your DB and documents',
+                        trailing: const Icon(Icons.share, size: 20),
+                        onTap: () async {
+                          try {
+                            final path = await ref
+                                .read(settingsProvider.notifier)
+                                .exportData();
+                            // ignore: deprecated_member_use
+                            await Share.shareXFiles([
+                              XFile(path),
+                            ], text: 'Mobile Assistant Backup');
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(const SnackBar(content: Text('')));
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSettingCard(
+                        theme: theme,
+                        icon: Icons.delete_forever,
+                        title: 'Delete All Data',
+                        subtitle: 'Wipe all local tasks, memories, documents',
+                        trailing: const Icon(
+                          Icons.warning,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        onTap: () => _showDeleteConfirm(context, ref),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 40),
                 ],

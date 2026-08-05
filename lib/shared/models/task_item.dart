@@ -49,10 +49,12 @@ class TaskItem {
   /// Compute the next due date for a recurring task after completion.
   DateTime nextDueDate() {
     if (recurrenceRule == null) return dueDate;
-    if (recurrenceRule!.contains('DAILY'))
+    if (recurrenceRule!.contains('DAILY')) {
       return dueDate.add(const Duration(days: 1));
-    if (recurrenceRule!.contains('WEEKLY'))
+    }
+    if (recurrenceRule!.contains('WEEKLY')) {
       return dueDate.add(const Duration(days: 7));
+    }
     if (recurrenceRule!.contains('MONTHLY')) {
       return DateTime(
         dueDate.year,

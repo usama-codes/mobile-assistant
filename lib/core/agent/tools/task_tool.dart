@@ -114,8 +114,9 @@ class TaskTool implements AgentTool {
     switch (action) {
       case 'create_task':
         final title = parameters['title']?.toString().trim();
-        if (title == null || title.isEmpty)
+        if (title == null || title.isEmpty) {
           throw Exception('Task title is required.');
+        }
 
         var dueDate = DateTime.now().add(const Duration(hours: 2));
         final dueDateStr = parameters['dueDate'];

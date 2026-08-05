@@ -51,6 +51,7 @@ Future<void> main() async {
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
+  // ignore: library_private_types_in_public_api
   static _MyAppState of(BuildContext context) =>
       context.findAncestorStateOfType<_MyAppState>()!;
 

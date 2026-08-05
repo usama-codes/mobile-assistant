@@ -10,16 +10,20 @@ class AgentActionCard extends StatelessWidget {
   static IconData _iconFor(String description) {
     final d = description.toLowerCase();
     if (d.contains('task')) return Icons.check_circle_outline_rounded;
-    if (d.contains('memory') || d.contains('remember'))
+    if (d.contains('memory') || d.contains('remember')) {
       return Icons.psychology_outlined;
-    if (d.contains('document') || d.contains('doc'))
+    }
+    if (d.contains('document') || d.contains('doc')) {
       return Icons.description_outlined;
-    if (d.contains('calendar') || d.contains('event'))
+    }
+    if (d.contains('calendar') || d.contains('event')) {
       return Icons.event_outlined;
+    }
     if (d.contains('plan')) return Icons.account_tree_outlined;
     if (d.contains('search')) return Icons.search_rounded;
-    if (d.contains('delete') || d.contains('forget'))
+    if (d.contains('delete') || d.contains('forget')) {
       return Icons.delete_outline_rounded;
+    }
     return Icons.bolt_rounded;
   }
 

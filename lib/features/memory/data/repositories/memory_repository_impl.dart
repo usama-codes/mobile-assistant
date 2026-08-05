@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mobile_assistant/core/db/database.dart';
 import 'package:mobile_assistant/core/db/objectbox.dart';
 import 'package:mobile_assistant/core/services/embedding_service.dart';
@@ -62,15 +64,17 @@ class MemoryRepositoryImpl implements MemoryRepository {
 
         if (toInsert.isNotEmpty) {
           _box.putMany(toInsert);
-          print('Migrated ${toInsert.length} memories from Drift to ObjectBox');
+          debugPrint(
+            'Migrated ${toInsert.length} memories from Drift to ObjectBox',
+          );
         }
       }
 
       // Delete old memories table from Drift
       await _db.customStatement('DROP TABLE memories;');
-      print('Dropped legacy memories table from Drift.');
+      debugPrint('Dropped legacy memories table from Drift.');
     } catch (e) {
-      print('Migration from Drift failed or already completed: $e');
+      debugPrint('Migration from Drift failed or already completed: $e');
     }
   }
 
