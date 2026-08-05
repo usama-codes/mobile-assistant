@@ -1,14 +1,58 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mobile_assistant/core/agent/agent_tool.dart';
 import 'package:mobile_assistant/core/db/app_database.dart';
 import 'package:mobile_assistant/core/services/embedding_service.dart';
-import 'package:mobile_assistant/core/services/crypto_service.dart';
-import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:mobile_assistant/core/services/vault_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DocumentTool implements AgentTool {
+  @override
+  List<FunctionDeclaration> get declarations => [
+    FunctionDeclaration(
+      'create_document',
+      'Save a document to the knowledge base',
+      Schema(SchemaType.object, properties: {
+        'title': Schema(SchemaType.string),
+        'content': Schema(SchemaType.string),
+        'folder': Schema(SchemaType.string, description: 'Category folder, e.g. general, work, personal'),
+        'is_sensitive': Schema(SchemaType.boolean, description: 'Encrypt file if true'),
+      }, requiredProperties: ['title', 'content']),
+    ),
+    FunctionDeclaration(
+      'search_documents',
+      'Search saved documents by keyword or topic',
+      Schema(SchemaType.object, properties: {
+        'keyword': Schema(SchemaType.string, description: 'Search keyword'),
+      }, requiredProperties: ['keyword']),
+    ),
+    FunctionDeclaration(
+      'read_document',
+      'Read the full content of a saved document by id',
+      Schema(SchemaType.object, properties: {
+        'id': Schema(SchemaType.integer, description: 'Document id'),
+      }, requiredProperties: ['id']),
+    ),
+    FunctionDeclaration(
+      'process_nlp',
+      'Run an NLP operation on a saved document',
+      Schema(SchemaType.object, properties: {
+        'id': Schema(SchemaType.integer),
+        'operation': Schema(SchemaType.string, description: 'summarize, translate, extract_entities, extract_keywords, generate_flashcards, generate_study_guide, extract_tasks'),
+      }, requiredProperties: ['id', 'operation']),
+    ),
+  ];
+
+  @override
+  bool canHandle(String functionName) {
+    const handled = {'create_document', 'search_documents', 'read_document', 'process_nlp'};
+    return handled.contains(functionName);
+  }
+
+
   @override
   String get name => 'document_tool';
 
@@ -26,10 +70,10 @@ class DocumentTool implements AgentTool {
         final isSensitive = parameters['is_sensitive'] == true;
         
         if (title == null || title.toString().trim().isEmpty) {
-          throw Exception("Document title is required.");
+          throw Exception('Document title is required.');
         }
         if (content == null) {
-          throw Exception("Document content is required.");
+          throw Exception('Document content is required.');
         }
 
         final folder = parameters['folder'] ?? 'general';
@@ -44,22 +88,20 @@ class DocumentTool implements AgentTool {
           await docDir.create(recursive: true);
         }
 
-        final safeTitle = title.toString().replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+        final safeTitle = title.toString().replaceAll(RegExp('[^a-zA-Z0-9]'), '_');
         final fileName = '${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.md';
         final file = File('${docDir.path}/$fileName');
         
-        String textToSave = content.toString();
+        var textToSave = content.toString();
         if (isSensitive) {
-          textToSave = await CryptoService.encrypt(textToSave);
+          textToSave = await VaultService.instance.encrypt(textToSave);
         }
         
         await file.writeAsString(textToSave);
 
-        // Generate embedding using the first 2000 chars of the document (unencrypted)
-        String textToEmbed = "\\\n";
-        if (textToEmbed.length > 2000) {
-          textToEmbed = textToEmbed.substring(0, 2000);
-        }
+        // BUG FIX: embed actual document content, not a broken escape sequence
+        var textToEmbed = content.toString();
+        if (textToEmbed.length > 2000) textToEmbed = textToEmbed.substring(0, 2000);
         final embedding = await EmbeddingService.getEmbedding(textToEmbed);
         final embeddingStr = jsonEncode(embedding);
 
@@ -79,7 +121,7 @@ class DocumentTool implements AgentTool {
       case 'search_documents':
         final keyword = parameters['keyword']?.toString().toLowerCase();
         if (keyword == null || keyword.isEmpty) {
-          return "No keyword provided for search.";
+          return 'No keyword provided for search.';
         }
 
         final results = await db.query('documents');
@@ -90,23 +132,23 @@ class DocumentTool implements AgentTool {
         }).toList();
 
         if (matches.isEmpty) return "No documents found matching '$keyword'.";
-        return matches.map((d) => "ID: ${d['id']} - Title: ${d['title']}").join("\n");
+        return matches.map((d) => "ID: ${d['id']} - Title: ${d['title']}").join('\n');
 
       case 'read_document':
         final id = parameters['id'];
-        if (id == null) return "Document ID required.";
+        if (id == null) return 'Document ID required.';
         
         final results = await db.query('documents', where: 'id = ?', whereArgs: [id]);
-        if (results.isEmpty) return "Document not found.";
+        if (results.isEmpty) return 'Document not found.';
         
         final doc = results.first;
         final file = File(doc['file_path'].toString());
-        if (!await file.exists()) return "Document file missing on disk.";
+        if (!await file.exists()) return 'Document file missing on disk.';
         
-        String content = await file.readAsString();
-        if (content.contains(':') && content.length > 24) {
+        var content = await file.readAsString();
+        if (VaultService.instance.isEncrypted(content)) {
           try {
-            content = await CryptoService.decrypt(content);
+            content = await VaultService.instance.decrypt(content);
           } catch (e) {
             // maybe it was just a regular string with a colon
           }
@@ -121,31 +163,31 @@ class DocumentTool implements AgentTool {
         if (id == null || operation == null) return "Missing 'id' or 'operation'.";
 
         final results = await db.query('documents', where: 'id = ?', whereArgs: [id]);
-        if (results.isEmpty) return "Document not found.";
+        if (results.isEmpty) return 'Document not found.';
         
         final doc = results.first;
         final file = File(doc['file_path'].toString());
-        if (!await file.exists()) return "Document file missing on disk.";
+        if (!await file.exists()) return 'Document file missing on disk.';
         
-        String content = await file.readAsString();
-        if (content.contains(':') && content.length > 24) {
+        var content = await file.readAsString();
+        if (VaultService.instance.isEncrypted(content)) {
           try {
-            content = await CryptoService.decrypt(content);
+            content = await VaultService.instance.decrypt(content);
           } catch (e) {
              // ignore
           }
         }
         
         final apiKey = dotenv.env['GEMINI_API_KEY'];
-        if (apiKey == null) throw Exception("API Key not found.");
+        if (apiKey == null) throw Exception('API Key not found.');
         
-        String prompt = "You are an expert NLP processor.\\n";
-        prompt += "Perform the following operation on the provided document content: $operation\\n";
+        var prompt = r'You are an expert NLP processor.\n';
+        prompt += 'Perform the following operation on the provided document content: $operation\\n';
         if (language != null) {
-          prompt += "Target language: $language\\n";
+          prompt += 'Target language: $language\\n';
         }
         prompt += "\\nDOCUMENT TITLE: ${doc['title']}\\n";
-        prompt += "\\nCONTENT:\\n$content\\n";
+        prompt += '\\nCONTENT:\\n$content\\n';
 
         final fallbackModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-1.5-flash'];
         GenerateContentResponse? response;
@@ -155,16 +197,16 @@ class DocumentTool implements AgentTool {
             response = await model.generateContent([Content.text(prompt)]);
             break;
           } catch (e) {
-            print("NLP Model $modelName failed: $e");
+            print('NLP Model $modelName failed: $e');
           }
         }
         
-        final generatedText = response?.text?.trim() ?? "";
+        final generatedText = response?.text?.trim() ?? '';
         
-        if (generatedText.isEmpty) return "NLP operation failed to generate content.";
+        if (generatedText.isEmpty) return 'NLP operation failed to generate content.';
         
         final newTitle = "$operation result for: ${doc['title']}";
-        return await execute('create_document', {
+        return execute('create_document', {
           'title': newTitle,
           'content': generatedText,
           'folder': 'nlp_results',
@@ -173,7 +215,7 @@ class DocumentTool implements AgentTool {
         });
 
       default:
-        return "Unknown action: $action in DocumentTool";
+        return 'Unknown action: $action in DocumentTool';
     }
   }
 
@@ -182,11 +224,11 @@ class DocumentTool implements AgentTool {
     final queryEmbedding = await EmbeddingService.getEmbedding(query);
     
     final results = await db.query('documents');
-    List<Map<String, dynamic>> scoredDocs = [];
+    final scoredDocs = <Map<String, dynamic>>[];
     
-    for (var row in results) {
+    for (final row in results) {
       if (row['embedding'] != null) {
-        final List<dynamic> embDynamic = jsonDecode(row['embedding'].toString());
+        final embDynamic = jsonDecode(row['embedding'].toString()) as List<dynamic>;
         final emb = embDynamic.map((e) => (e as num).toDouble()).toList();
         final score = EmbeddingService.cosineSimilarity(queryEmbedding, emb);
         scoredDocs.add({
@@ -201,26 +243,26 @@ class DocumentTool implements AgentTool {
     scoredDocs.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
     final topDocs = scoredDocs.take(3).where((m) => (m['score'] as double) > 0.6).toList();
     
-    if (topDocs.isEmpty) return "No relevant documents found.";
+    if (topDocs.isEmpty) return 'No relevant documents found.';
     
-    List<String> excerpts = [];
-    for (var d in topDocs) {
+    final excerpts = <String>[];
+    for (final d in topDocs) {
       final file = File(d['file_path'].toString());
       if (await file.exists()) {
-        String content = await file.readAsString();
-        if (content.contains(':') && content.length > 24) {
+        var content = await file.readAsString();
+        if (VaultService.instance.isEncrypted(content)) {
           try {
-            content = await CryptoService.decrypt(content);
+            content = await VaultService.instance.decrypt(content);
           } catch (e) {
              // ignore
           }
         }
         
-        if (content.length > 500) content = content.substring(0, 500) + '...';
-        excerpts.add("[Doc ${d['id']}: ${d['title']} (Score: ${d['score']})]\\n${content}");
+        if (content.length > 500) content = '${content.substring(0, 500)}...';
+        excerpts.add("[Doc ${d['id']}: ${d['title']} (Score: ${d['score']})]\\n$content");
       }
     }
     
-    return excerpts.join("\\n\\n");
+    return excerpts.join(r'\n\n');
   }
 }

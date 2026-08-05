@@ -5,14 +5,14 @@ class OCRService {
   static Future<String> extractTextFromImage(String imagePath) async {
     final file = File(imagePath);
     if (!await file.exists()) {
-      throw Exception("Image file not found: $imagePath");
+      throw Exception('Image file not found: $imagePath');
     }
 
     final inputImage = InputImage.fromFilePath(imagePath);
-    final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    final textRecognizer = TextRecognizer();
     
     try {
-      final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+      final recognizedText = await textRecognizer.processImage(inputImage);
       return recognizedText.text;
     } finally {
       textRecognizer.close();

@@ -1,10 +1,44 @@
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mobile_assistant/core/agent/agent_tool.dart';
-import 'package:mobile_assistant/core/db/app_database.dart';
-import 'package:mobile_assistant/core/services/embedding_service.dart';
-import 'package:mobile_assistant/core/services/crypto_service.dart';
-import 'dart:convert';
+import 'package:mobile_assistant/features/memory/domain/repositories/memory_repository.dart';
 
 class MemoryTool implements AgentTool {
+  MemoryTool(this._repo);
+  final MemoryRepository _repo;
+
+  @override
+  List<FunctionDeclaration> get declarations => [
+    FunctionDeclaration(
+      'remember_fact',
+      'Save a fact or user preference to long-term memory',
+      Schema(SchemaType.object, properties: {
+        'fact': Schema(SchemaType.string, description: 'The fact to remember'),
+        'importance': Schema(SchemaType.number, description: '0.0 to 1.0, default 0.5'),
+        'is_sensitive': Schema(SchemaType.boolean, description: 'Encrypt if true'),
+      }, requiredProperties: ['fact']),
+    ),
+    FunctionDeclaration(
+      'forget_fact',
+      'Delete a previously saved memory by its id',
+      Schema(SchemaType.object, properties: {
+        'id': Schema(SchemaType.integer, description: 'Memory id to delete'),
+      }, requiredProperties: ['id']),
+    ),
+    FunctionDeclaration(
+      'search_memory',
+      'Semantically search saved memories for a query',
+      Schema(SchemaType.object, properties: {
+        'query': Schema(SchemaType.string, description: 'Natural language query'),
+      }, requiredProperties: ['query']),
+    ),
+  ];
+
+  @override
+  bool canHandle(String functionName) {
+    const handled = {'remember_fact', 'forget_fact', 'search_memory'};
+    return handled.contains(functionName);
+  }
+
   @override
   String get name => 'memory_tool';
 
@@ -13,78 +47,42 @@ class MemoryTool implements AgentTool {
 
   @override
   Future<String> execute(String action, Map<String, dynamic> parameters) async {
-    final db = await AppDatabase.instance.database;
-
     switch (action) {
       case 'remember_fact':
-        final fact = parameters['fact']?.toString() ?? '';
-        final importance = parameters['importance'] is num ? (parameters['importance'] as num).toDouble() : 0.5;
+        final fact = parameters['fact']?.toString().trim() ?? '';
+        if (fact.isEmpty) throw Exception('Fact cannot be empty.');
+        final importance = parameters['importance'] is num
+            ? (parameters['importance'] as num).toDouble()
+            : 0.5;
         final isSensitive = parameters['is_sensitive'] == true;
-        
-        final embedding = await EmbeddingService.getEmbedding(fact);
-        final embeddingStr = jsonEncode(embedding);
-
-        String textToSave = fact;
-        if (isSensitive) {
-          textToSave = await CryptoService.encrypt(fact);
-        }
-
-        await db.insert('memories', {
-          'fact': textToSave,
-          'importance': importance,
-          'createdAt': DateTime.now().toIso8601String(),
-          'embedding': embeddingStr,
-        });
-        return "Saved memory: '\' with importance \.";
+        await _repo.addMemory(fact, importance: importance, isSensitive: isSensitive);
+        return "Saved memory: '$fact'";
 
       case 'forget_fact':
         final id = parameters['id'];
-        if (id == null) return "Missing 'id' for forget_fact.";
-        final count = await db.delete('memories', where: 'id = ?', whereArgs: [id]);
-        return count > 0 ? "Deleted memory \." : "Memory \ not found.";
+        if (id == null) throw Exception('Memory id is required.');
+        await _repo.deleteMemory(id as int);
+        return 'Deleted memory $id.';
 
       case 'search_memory':
-        final query = parameters['query']?.toString();
-        if (query == null || query.isEmpty) return "No query provided.";
-        return await searchMemories(query);
+        final query = parameters['query']?.toString().trim() ?? '';
+        if (query.isEmpty) throw Exception('Search query cannot be empty.');
+        final results = await _repo.searchMemories(query);
+        if (results.isEmpty) return 'No relevant memories found.';
+        return results
+            .map((m) => '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}')
+            .join('\n');
 
       default:
-        return "Unknown action: \ in MemoryTool";
+        throw Exception("Unknown action '$action' for MemoryTool.");
     }
   }
 
   Future<String> searchMemories(String query) async {
-    final db = await AppDatabase.instance.database;
-    final queryEmbedding = await EmbeddingService.getEmbedding(query);
-    
-    final results = await db.query('memories');
-    List<Map<String, dynamic>> scoredMemories = [];
-    
-    for (var row in results) {
-      if (row['embedding'] != null) {
-        final List<dynamic> embDynamic = jsonDecode(row['embedding'].toString());
-        final emb = embDynamic.map((e) => (e as num).toDouble()).toList();
-        final score = EmbeddingService.cosineSimilarity(queryEmbedding, emb);
-        
-        String decryptedFact = row['fact'].toString();
-        if (decryptedFact.contains(':')) {
-           decryptedFact = await CryptoService.decrypt(decryptedFact);
-        }
-
-        scoredMemories.add({
-          'id': row['id'],
-          'fact': decryptedFact,
-          'score': score,
-          'createdAt': row['createdAt'],
-        });
-      }
-    }
-    
-    scoredMemories.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
-    final topMemories = scoredMemories.take(5).where((m) => (m['score'] as double) > 0.6).toList();
-    
-    if (topMemories.isEmpty) return "No relevant memories found.";
-    
-    return topMemories.map((m) => "[Id: ${m['id']}, Score: ${m['score']}] ${m['fact']}").join("\n");
+    final results = await _repo.searchMemories(query);
+    if (results.isEmpty) return 'No relevant memories found.';
+    return results
+        .map((m) => '[id:${m.id}, importance:${m.importance.toStringAsFixed(2)}] ${m.fact}')
+        .join('\n');
   }
 }
