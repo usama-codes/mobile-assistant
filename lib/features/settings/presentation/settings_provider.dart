@@ -72,8 +72,9 @@ class SettingsNotifier extends _$SettingsNotifier {
     var mode = ThemeMode.dark;
     if (themeStr == 'light') {
       mode = ThemeMode.light;
-    } else if (themeStr == 'system')
+    } else if (themeStr == 'system') {
       mode = ThemeMode.system;
+    }
 
     final strategyStr =
         await _storage.read(key: 'inference_strategy') ?? 'hybrid';
@@ -102,10 +103,11 @@ class SettingsNotifier extends _$SettingsNotifier {
     final svc = InferenceService.instance;
     if (strategy == 'cloud') {
       svc.strategy = InferenceStrategy.cloudOnly;
-    } else if (strategy == 'local')
+    } else if (strategy == 'local') {
       svc.strategy = InferenceStrategy.localOnly;
-    else
+    } else {
       svc.strategy = InferenceStrategy.hybrid;
+    }
   }
 
   Future<void> toggleAppLock(bool value) async {
