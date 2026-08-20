@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_assistant/features/onboarding/presentation/onboarding_provider.dart';
 import 'package:mobile_assistant/features/lock/presentation/screens/lock_screen.dart';
+import 'package:mobile_assistant/shared/widgets/download_indicator.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
@@ -52,7 +53,7 @@ class OnboardingScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 40),
               if (state.error != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -82,21 +83,12 @@ class OnboardingScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
               ],
               if (state.isDownloading) ...[
-                Text(
-                  'Downloading... ${state.progress}%',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: state.progress > 0 ? state.progress / 100 : null,
-                    minHeight: 8,
-                    backgroundColor: theme.colorScheme.primary.withValues(
-                      alpha: 0.2,
-                    ),
-                  ),
+                DownloadIndicator(
+                  progress: state.progress,
+                  size: DownloadIndicatorSize.large,
+                  showPercentage: true,
+                  showFileSize: true,
+                  totalSizeGB: 1.35,
                 ),
                 const SizedBox(height: 24),
               ],
@@ -134,7 +126,8 @@ class OnboardingScreen extends ConsumerWidget {
                   style: TextStyle(color: theme.disabledColor),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

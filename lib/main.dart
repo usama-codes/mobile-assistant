@@ -6,14 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_assistant/features/settings/presentation/settings_provider.dart';
 import 'package:mobile_assistant/core/db/objectbox.dart';
 import 'package:mobile_assistant/core/services/analytics_service.dart';
-import 'package:mobile_assistant/core/services/inference_service.dart';
 import 'package:mobile_assistant/core/services/migration_service.dart';
 import 'package:mobile_assistant/core/services/notification_service.dart';
 import 'package:mobile_assistant/core/services/vault_service.dart';
+import 'package:mobile_assistant/core/services/voice_service.dart';
 import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/features/chat/presentation/chat_screen.dart';
-import 'package:mobile_assistant/features/lock/presentation/screens/lock_screen.dart';
-import 'package:mobile_assistant/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:mobile_assistant/features/splash/presentation/splash_screen.dart';
 import 'package:mobile_assistant/features/settings/presentation/settings_screen.dart';
 import 'package:mobile_assistant/features/tasks/presentation/tasks_screen.dart';
 import 'package:mobile_assistant/features/vault/presentation/vault_screen.dart';
@@ -21,23 +20,13 @@ import 'package:mobile_assistant/l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await VaultService.instance.initialize();
-  await MigrationService.runMigrations();
-  await InferenceService.instance.initialize();
-  await NotificationService.instance.initialize();
+
+  // Only fast, critical-path work before runApp().
   try {
     await dotenv.load();
   } catch (e) {
     logger.e('Could not load .env file', error: e);
   }
-
-  // try {
-  //   await Firebase.initializeApp();
-  //   FlutterError.onError = AnalyticsService().recordFlutterFatalError;
-  // } catch (e) {
-  //   logger.e('Firebase init failed', error: e);
-  // }
-
   final objectBox = await ObjectBox.create();
 
   runApp(
@@ -46,6 +35,24 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
+
+  // Everything else runs in the background while the splash animation plays.
+  _initializeApp();
+}
+
+/// Background init — fire-and-forget, runs concurrently with splash animation.
+/// VaultService, MigrationService, VoiceService, NotificationService are
+/// lightweight and finish well within the 2400 ms splash window.
+/// Gemma is NOT loaded here — it's deferred to first chat use (warmUp()).
+Future<void> _initializeApp() async {
+  try {
+    await VaultService.instance.initialize();
+    await MigrationService.runMigrations();
+    await NotificationService.instance.initialize();
+    await VoiceService.instance.initialize();
+  } catch (e) {
+    logger.e('Background init failed', error: e);
+  }
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -96,9 +103,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('ur')],
-      home: InferenceService.instance.isLocalModelLoaded
-          ? const LockScreen()
-          : const OnboardingScreen(),
+      home: const SplashScreen(),
     );
   }
 }

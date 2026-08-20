@@ -14,6 +14,7 @@ abstract class DocumentItem with _$DocumentItem {
     required String documentType,
     required String filePath,
     required DateTime createdAt,
+    @Default(false) bool isEncrypted,
   }) = _DocumentItem;
 
   factory DocumentItem.fromJson(Map<String, dynamic> json) =>

@@ -9,32 +9,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
-        
+
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
-        
+        cache: true
+
     - name: Get Dependencies
       run: flutter pub get
-      
-    - name: Create dummy .env
-      run: touch .env
 
-    - name: Format
-      run: dart format .
-      
-    - name: Analyze
-      run: flutter analyze --no-fatal-infos
-      
-    - name: Run Tests
-      run: flutter test
+    - name: Create dummy .env
+      run: echo "GEMINI_API_KEY=test_key" > .env
+
+    - name: Verify Format
+      run: dart format --set-exit-if-changed .
+
+    - name: Analyze with very_good_analysis
+      run: flutter analyze --fatal-infos
+
+    - name: Run Tests with Coverage
+      run: flutter test --coverage --test-randomize-ordering-seed=random
+
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage/lcov.info
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Generate Coverage Summary
+      run: |
+        echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        if [ -f coverage/lcov.info ]; then
+          total_lines=$(grep -c "^DA:" coverage/lcov.info || echo "0")
+          covered_lines=$(grep "^DA:" coverage/lcov.info | grep -c ",1$" || echo "0")
+          if [ "$total_lines" -gt 0 ]; then
+            coverage=$((covered_lines * 100 / total_lines))
+            echo "Coverage: ${coverage}% (${covered_lines}/${total_lines} lines)" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DocumentItem {
 
- int get id; String get title; String get folder; List<String> get tags; String get originalSource; String get documentType; String get filePath; DateTime get createdAt;
+ int get id; String get title; String get folder; List<String> get tags; String get originalSource; String get documentType; String get filePath; DateTime get createdAt; bool get isEncrypted;
 /// Create a copy of DocumentItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $DocumentItemCopyWith<DocumentItem> get copyWith => _$DocumentItemCopyWithImpl<D
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DocumentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.folder, folder) || other.folder == folder)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.originalSource, originalSource) || other.originalSource == originalSource)&&(identical(other.documentType, documentType) || other.documentType == documentType)&&(identical(other.filePath, filePath) || other.filePath == filePath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DocumentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.folder, folder) || other.folder == folder)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.originalSource, originalSource) || other.originalSource == originalSource)&&(identical(other.documentType, documentType) || other.documentType == documentType)&&(identical(other.filePath, filePath) || other.filePath == filePath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.isEncrypted, isEncrypted) || other.isEncrypted == isEncrypted));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,folder,const DeepCollectionEquality().hash(tags),originalSource,documentType,filePath,createdAt);
+int get hashCode => Object.hash(runtimeType,id,title,folder,const DeepCollectionEquality().hash(tags),originalSource,documentType,filePath,createdAt,isEncrypted);
 
 @override
 String toString() {
-  return 'DocumentItem(id: $id, title: $title, folder: $folder, tags: $tags, originalSource: $originalSource, documentType: $documentType, filePath: $filePath, createdAt: $createdAt)';
+  return 'DocumentItem(id: $id, title: $title, folder: $folder, tags: $tags, originalSource: $originalSource, documentType: $documentType, filePath: $filePath, createdAt: $createdAt, isEncrypted: $isEncrypted)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $DocumentItemCopyWith<$Res>  {
   factory $DocumentItemCopyWith(DocumentItem value, $Res Function(DocumentItem) _then) = _$DocumentItemCopyWithImpl;
 @useResult
 $Res call({
- int id, String title, String folder, List<String> tags, String originalSource, String documentType, String filePath, DateTime createdAt
+ int id, String title, String folder, List<String> tags, String originalSource, String documentType, String filePath, DateTime createdAt, bool isEncrypted
 });
 
 
@@ -65,7 +65,7 @@ class _$DocumentItemCopyWithImpl<$Res>
 
 /// Create a copy of DocumentItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? folder = null,Object? tags = null,Object? originalSource = null,Object? documentType = null,Object? filePath = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? folder = null,Object? tags = null,Object? originalSource = null,Object? documentType = null,Object? filePath = null,Object? createdAt = null,Object? isEncrypted = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -75,7 +75,8 @@ as List<String>,originalSource: null == originalSource ? _self.originalSource : 
 as String,documentType: null == documentType ? _self.documentType : documentType // ignore: cast_nullable_to_non_nullable
 as String,filePath: null == filePath ? _self.filePath : filePath // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,isEncrypted: null == isEncrypted ? _self.isEncrypted : isEncrypted // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -160,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt,  bool isEncrypted)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DocumentItem() when $default != null:
-return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt,_that.isEncrypted);case _:
   return orElse();
 
 }
@@ -181,10 +182,10 @@ return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSourc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt,  bool isEncrypted)  $default,) {final _that = this;
 switch (_that) {
 case _DocumentItem():
-return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt,_that.isEncrypted);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +202,10 @@ return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSourc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String folder,  List<String> tags,  String originalSource,  String documentType,  String filePath,  DateTime createdAt,  bool isEncrypted)?  $default,) {final _that = this;
 switch (_that) {
 case _DocumentItem() when $default != null:
-return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt);case _:
+return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSource,_that.documentType,_that.filePath,_that.createdAt,_that.isEncrypted);case _:
   return null;
 
 }
@@ -216,7 +217,7 @@ return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSourc
 @JsonSerializable()
 
 class _DocumentItem implements DocumentItem {
-  const _DocumentItem({required this.id, required this.title, required this.folder, required final  List<String> tags, required this.originalSource, required this.documentType, required this.filePath, required this.createdAt}): _tags = tags;
+  const _DocumentItem({required this.id, required this.title, required this.folder, required final  List<String> tags, required this.originalSource, required this.documentType, required this.filePath, required this.createdAt, this.isEncrypted = false}): _tags = tags;
   factory _DocumentItem.fromJson(Map<String, dynamic> json) => _$DocumentItemFromJson(json);
 
 @override final  int id;
@@ -233,6 +234,7 @@ class _DocumentItem implements DocumentItem {
 @override final  String documentType;
 @override final  String filePath;
 @override final  DateTime createdAt;
+@override@JsonKey() final  bool isEncrypted;
 
 /// Create a copy of DocumentItem
 /// with the given fields replaced by the non-null parameter values.
@@ -247,16 +249,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DocumentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.folder, folder) || other.folder == folder)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.originalSource, originalSource) || other.originalSource == originalSource)&&(identical(other.documentType, documentType) || other.documentType == documentType)&&(identical(other.filePath, filePath) || other.filePath == filePath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DocumentItem&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.folder, folder) || other.folder == folder)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.originalSource, originalSource) || other.originalSource == originalSource)&&(identical(other.documentType, documentType) || other.documentType == documentType)&&(identical(other.filePath, filePath) || other.filePath == filePath)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.isEncrypted, isEncrypted) || other.isEncrypted == isEncrypted));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,folder,const DeepCollectionEquality().hash(_tags),originalSource,documentType,filePath,createdAt);
+int get hashCode => Object.hash(runtimeType,id,title,folder,const DeepCollectionEquality().hash(_tags),originalSource,documentType,filePath,createdAt,isEncrypted);
 
 @override
 String toString() {
-  return 'DocumentItem(id: $id, title: $title, folder: $folder, tags: $tags, originalSource: $originalSource, documentType: $documentType, filePath: $filePath, createdAt: $createdAt)';
+  return 'DocumentItem(id: $id, title: $title, folder: $folder, tags: $tags, originalSource: $originalSource, documentType: $documentType, filePath: $filePath, createdAt: $createdAt, isEncrypted: $isEncrypted)';
 }
 
 
@@ -267,7 +269,7 @@ abstract mixin class _$DocumentItemCopyWith<$Res> implements $DocumentItemCopyWi
   factory _$DocumentItemCopyWith(_DocumentItem value, $Res Function(_DocumentItem) _then) = __$DocumentItemCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String title, String folder, List<String> tags, String originalSource, String documentType, String filePath, DateTime createdAt
+ int id, String title, String folder, List<String> tags, String originalSource, String documentType, String filePath, DateTime createdAt, bool isEncrypted
 });
 
 
@@ -284,7 +286,7 @@ class __$DocumentItemCopyWithImpl<$Res>
 
 /// Create a copy of DocumentItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? folder = null,Object? tags = null,Object? originalSource = null,Object? documentType = null,Object? filePath = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? folder = null,Object? tags = null,Object? originalSource = null,Object? documentType = null,Object? filePath = null,Object? createdAt = null,Object? isEncrypted = null,}) {
   return _then(_DocumentItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -294,7 +296,8 @@ as List<String>,originalSource: null == originalSource ? _self.originalSource : 
 as String,documentType: null == documentType ? _self.documentType : documentType // ignore: cast_nullable_to_non_nullable
 as String,filePath: null == filePath ? _self.filePath : filePath // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,isEncrypted: null == isEncrypted ? _self.isEncrypted : isEncrypted // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

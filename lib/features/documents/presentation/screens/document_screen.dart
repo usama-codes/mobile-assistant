@@ -93,9 +93,38 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Text(
-                      'Folder: ${doc.folder} • Type: ${doc.documentType}',
-                      style: TextStyle(color: theme.textTheme.bodySmall?.color),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Folder: ${doc.folder} • Type: ${doc.documentType}',
+                          style: TextStyle(
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
+                        if (doc.isEncrypted) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_outline_rounded,
+                                size: 12,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Stored locally, encrypted',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),

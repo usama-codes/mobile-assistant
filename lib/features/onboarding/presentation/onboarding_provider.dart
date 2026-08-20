@@ -3,6 +3,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:mobile_assistant/core/services/inference_service.dart';
+import 'package:mobile_assistant/core/services/profile_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -86,7 +87,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
         FileDownloader().configureNotification(
           running: const TaskNotification(
             'Downloading AI Model',
-            'Progress: {progress}%',
+            'Progress: {progress}',
           ),
           complete: const TaskNotification(
             'Model Downloaded',
@@ -129,6 +130,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       ).fromFile(finalFilePath).install();
 
       InferenceService.instance.isLocalModelLoaded = true;
+      await ProfileService.instance.setOnboardingComplete(true);
       state = state.copyWith(isDownloading: false, isComplete: true);
     } catch (e) {
       state = state.copyWith(
@@ -139,7 +141,8 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     }
   }
 
-  void skipForNow() {
+  Future<void> skipForNow() async {
+    await ProfileService.instance.setOnboardingComplete(true);
     state = state.copyWith(isComplete: true);
   }
 }

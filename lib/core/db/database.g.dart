@@ -1291,6 +1291,18 @@ class $DocumentsTable extends Documents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isEncryptedMeta = const VerificationMeta(
+    'isEncrypted',
+  );
+  @override
+  late final GeneratedColumn<int> isEncrypted = GeneratedColumn<int>(
+    'is_encrypted',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1302,6 +1314,7 @@ class $DocumentsTable extends Documents
     filePath,
     createdAt,
     embedding,
+    isEncrypted,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1372,6 +1385,15 @@ class $DocumentsTable extends Documents
         embedding.isAcceptableOrUnknown(data['embedding']!, _embeddingMeta),
       );
     }
+    if (data.containsKey('is_encrypted')) {
+      context.handle(
+        _isEncryptedMeta,
+        isEncrypted.isAcceptableOrUnknown(
+          data['is_encrypted']!,
+          _isEncryptedMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1417,6 +1439,10 @@ class $DocumentsTable extends Documents
         DriftSqlType.string,
         data['${effectivePrefix}embedding'],
       ),
+      isEncrypted: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_encrypted'],
+      )!,
     );
   }
 
@@ -1436,6 +1462,7 @@ class Document extends DataClass implements Insertable<Document> {
   final String? filePath;
   final String? createdAt;
   final String? embedding;
+  final int isEncrypted;
   const Document({
     required this.id,
     this.title,
@@ -1446,6 +1473,7 @@ class Document extends DataClass implements Insertable<Document> {
     this.filePath,
     this.createdAt,
     this.embedding,
+    required this.isEncrypted,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1475,6 +1503,7 @@ class Document extends DataClass implements Insertable<Document> {
     if (!nullToAbsent || embedding != null) {
       map['embedding'] = Variable<String>(embedding);
     }
+    map['is_encrypted'] = Variable<int>(isEncrypted);
     return map;
   }
 
@@ -1503,6 +1532,7 @@ class Document extends DataClass implements Insertable<Document> {
       embedding: embedding == null && nullToAbsent
           ? const Value.absent()
           : Value(embedding),
+      isEncrypted: Value(isEncrypted),
     );
   }
 
@@ -1521,6 +1551,7 @@ class Document extends DataClass implements Insertable<Document> {
       filePath: serializer.fromJson<String?>(json['filePath']),
       createdAt: serializer.fromJson<String?>(json['createdAt']),
       embedding: serializer.fromJson<String?>(json['embedding']),
+      isEncrypted: serializer.fromJson<int>(json['isEncrypted']),
     );
   }
   @override
@@ -1536,6 +1567,7 @@ class Document extends DataClass implements Insertable<Document> {
       'filePath': serializer.toJson<String?>(filePath),
       'createdAt': serializer.toJson<String?>(createdAt),
       'embedding': serializer.toJson<String?>(embedding),
+      'isEncrypted': serializer.toJson<int>(isEncrypted),
     };
   }
 
@@ -1549,6 +1581,7 @@ class Document extends DataClass implements Insertable<Document> {
     Value<String?> filePath = const Value.absent(),
     Value<String?> createdAt = const Value.absent(),
     Value<String?> embedding = const Value.absent(),
+    int? isEncrypted,
   }) => Document(
     id: id ?? this.id,
     title: title.present ? title.value : this.title,
@@ -1561,6 +1594,7 @@ class Document extends DataClass implements Insertable<Document> {
     filePath: filePath.present ? filePath.value : this.filePath,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     embedding: embedding.present ? embedding.value : this.embedding,
+    isEncrypted: isEncrypted ?? this.isEncrypted,
   );
   Document copyWithCompanion(DocumentsCompanion data) {
     return Document(
@@ -1577,6 +1611,9 @@ class Document extends DataClass implements Insertable<Document> {
       filePath: data.filePath.present ? data.filePath.value : this.filePath,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       embedding: data.embedding.present ? data.embedding.value : this.embedding,
+      isEncrypted: data.isEncrypted.present
+          ? data.isEncrypted.value
+          : this.isEncrypted,
     );
   }
 
@@ -1591,7 +1628,8 @@ class Document extends DataClass implements Insertable<Document> {
           ..write('documentType: $documentType, ')
           ..write('filePath: $filePath, ')
           ..write('createdAt: $createdAt, ')
-          ..write('embedding: $embedding')
+          ..write('embedding: $embedding, ')
+          ..write('isEncrypted: $isEncrypted')
           ..write(')'))
         .toString();
   }
@@ -1607,6 +1645,7 @@ class Document extends DataClass implements Insertable<Document> {
     filePath,
     createdAt,
     embedding,
+    isEncrypted,
   );
   @override
   bool operator ==(Object other) =>
@@ -1620,7 +1659,8 @@ class Document extends DataClass implements Insertable<Document> {
           other.documentType == this.documentType &&
           other.filePath == this.filePath &&
           other.createdAt == this.createdAt &&
-          other.embedding == this.embedding);
+          other.embedding == this.embedding &&
+          other.isEncrypted == this.isEncrypted);
 }
 
 class DocumentsCompanion extends UpdateCompanion<Document> {
@@ -1633,6 +1673,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
   final Value<String?> filePath;
   final Value<String?> createdAt;
   final Value<String?> embedding;
+  final Value<int> isEncrypted;
   const DocumentsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -1643,6 +1684,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.filePath = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.embedding = const Value.absent(),
+    this.isEncrypted = const Value.absent(),
   });
   DocumentsCompanion.insert({
     this.id = const Value.absent(),
@@ -1654,6 +1696,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.filePath = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.embedding = const Value.absent(),
+    this.isEncrypted = const Value.absent(),
   });
   static Insertable<Document> custom({
     Expression<int>? id,
@@ -1665,6 +1708,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Expression<String>? filePath,
     Expression<String>? createdAt,
     Expression<String>? embedding,
+    Expression<int>? isEncrypted,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1676,6 +1720,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       if (filePath != null) 'file_path': filePath,
       if (createdAt != null) 'created_at': createdAt,
       if (embedding != null) 'embedding': embedding,
+      if (isEncrypted != null) 'is_encrypted': isEncrypted,
     });
   }
 
@@ -1689,6 +1734,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Value<String?>? filePath,
     Value<String?>? createdAt,
     Value<String?>? embedding,
+    Value<int>? isEncrypted,
   }) {
     return DocumentsCompanion(
       id: id ?? this.id,
@@ -1700,6 +1746,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       filePath: filePath ?? this.filePath,
       createdAt: createdAt ?? this.createdAt,
       embedding: embedding ?? this.embedding,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
     );
   }
 
@@ -1733,6 +1780,9 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     if (embedding.present) {
       map['embedding'] = Variable<String>(embedding.value);
     }
+    if (isEncrypted.present) {
+      map['is_encrypted'] = Variable<int>(isEncrypted.value);
+    }
     return map;
   }
 
@@ -1747,7 +1797,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
           ..write('documentType: $documentType, ')
           ..write('filePath: $filePath, ')
           ..write('createdAt: $createdAt, ')
-          ..write('embedding: $embedding')
+          ..write('embedding: $embedding, ')
+          ..write('isEncrypted: $isEncrypted')
           ..write(')'))
         .toString();
   }
@@ -2831,6 +2882,7 @@ typedef $$DocumentsTableCreateCompanionBuilder =
       Value<String?> filePath,
       Value<String?> createdAt,
       Value<String?> embedding,
+      Value<int> isEncrypted,
     });
 typedef $$DocumentsTableUpdateCompanionBuilder =
     DocumentsCompanion Function({
@@ -2843,6 +2895,7 @@ typedef $$DocumentsTableUpdateCompanionBuilder =
       Value<String?> filePath,
       Value<String?> createdAt,
       Value<String?> embedding,
+      Value<int> isEncrypted,
     });
 
 class $$DocumentsTableFilterComposer
@@ -2896,6 +2949,11 @@ class $$DocumentsTableFilterComposer
 
   ColumnFilters<String> get embedding => $composableBuilder(
     column: $table.embedding,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isEncrypted => $composableBuilder(
+    column: $table.isEncrypted,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2953,6 +3011,11 @@ class $$DocumentsTableOrderingComposer
     column: $table.embedding,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get isEncrypted => $composableBuilder(
+    column: $table.isEncrypted,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DocumentsTableAnnotationComposer
@@ -2994,6 +3057,11 @@ class $$DocumentsTableAnnotationComposer
 
   GeneratedColumn<String> get embedding =>
       $composableBuilder(column: $table.embedding, builder: (column) => column);
+
+  GeneratedColumn<int> get isEncrypted => $composableBuilder(
+    column: $table.isEncrypted,
+    builder: (column) => column,
+  );
 }
 
 class $$DocumentsTableTableManager
@@ -3033,6 +3101,7 @@ class $$DocumentsTableTableManager
                 Value<String?> filePath = const Value.absent(),
                 Value<String?> createdAt = const Value.absent(),
                 Value<String?> embedding = const Value.absent(),
+                Value<int> isEncrypted = const Value.absent(),
               }) => DocumentsCompanion(
                 id: id,
                 title: title,
@@ -3043,6 +3112,7 @@ class $$DocumentsTableTableManager
                 filePath: filePath,
                 createdAt: createdAt,
                 embedding: embedding,
+                isEncrypted: isEncrypted,
               ),
           createCompanionCallback:
               ({
@@ -3055,6 +3125,7 @@ class $$DocumentsTableTableManager
                 Value<String?> filePath = const Value.absent(),
                 Value<String?> createdAt = const Value.absent(),
                 Value<String?> embedding = const Value.absent(),
+                Value<int> isEncrypted = const Value.absent(),
               }) => DocumentsCompanion.insert(
                 id: id,
                 title: title,
@@ -3065,6 +3136,7 @@ class $$DocumentsTableTableManager
                 filePath: filePath,
                 createdAt: createdAt,
                 embedding: embedding,
+                isEncrypted: isEncrypted,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

@@ -27,8 +27,21 @@ class InferenceService {
 
   InferenceStrategy strategy = InferenceStrategy.hybrid;
   bool isLocalModelLoaded = false;
+  bool _warmedUp = false;
 
+  /// Lightweight check — does NOT load Gemma. Used at startup to see if the
+  /// model happens to be cached from a prior session.
   Future<void> initialize() async {
+    isLocalModelLoaded = FlutterGemma.hasActiveModel();
+    logger.i('Gemma model cached: $isLocalModelLoaded');
+  }
+
+  /// Load Gemma on first chat use. Called lazily so the app starts fast.
+  /// Subsequent calls are no-ops once the model is loaded.
+  Future<void> warmUp() async {
+    if (_warmedUp) return;
+    _warmedUp = true;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final currentFileType =
@@ -47,6 +60,7 @@ class InferenceService {
         await prefs.remove('flutter.active_inference_source');
       }
 
+      logger.i('Loading Gemma model (first use)...');
       await FlutterGemma.initialize(
         inferenceEngines: [const MediaPipeEngine()],
       );
@@ -60,6 +74,41 @@ class InferenceService {
         stackTrace: st,
       );
       isLocalModelLoaded = false;
+    }
+  }
+
+  /// Run a single local generation with a system instruction and prompt,
+  /// returning the raw text. Used by structured extraction (ActionExtractor).
+  ///
+  /// Always local — never touches cloud APIs. Returns null when the model
+  /// is not loaded or generation fails.
+  Future<String?> generateLocalOnly({
+    required String systemInstruction,
+    required String prompt,
+  }) async {
+    if (!isLocalModelLoaded || !FlutterGemma.hasActiveModel()) {
+      logger.w('generateLocalOnly: no active local model');
+      return null;
+    }
+
+    try {
+      final model = await FlutterGemma.getActiveModel();
+      final chat = await model.createChat();
+      try {
+        await chat.addQueryChunk(
+          Message(text: 'System instruction: $systemInstruction\n\n$prompt', isUser: true),
+        );
+        final response = await chat.generateChatResponse();
+        if (response is TextResponse) {
+          return response.token;
+        }
+        return null;
+      } finally {
+        await chat.close();
+      }
+    } catch (e, st) {
+      logger.e('generateLocalOnly failed', error: e, stackTrace: st);
+      return null;
     }
   }
 

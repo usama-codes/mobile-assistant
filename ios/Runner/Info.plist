@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mobile Assistant uses the microphone so you can dictate messages and conversations with your voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Mobile Assistant uses speech recognition to convert your spoken words into text in the chat.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

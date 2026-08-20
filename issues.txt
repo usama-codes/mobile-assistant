@@ -1,0 +1,14 @@
+For the agent:
+Each line contains one issue, fix it, and only when the relevant tests are passed or the user manually tells you that the issue is resolved, comment the line by adding a // or # at the beginning of the line.
+
+Issues:
+
+// Upon clicking the enter button on the onboarding screen, focus should get to the next field if there is one.
+// API Key field should not be filled with dots if the user has not typed anything as it is confusing.
+// There should be an option to view the API key inserted so far
+// A method of validation of the API key inserted should be made.
+// When downloading AI model, the notification bar shows 2 % symbols.
+// Onboarding screen error causes bottom overflow
+// A task with completion time in the past should not be allowed
+// Some errors in the calendar_status_service and calendar_tool files, and supposedly that is why I did not get a notification five minutes before the expiry date of a task
+Got a

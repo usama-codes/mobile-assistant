@@ -11,7 +11,9 @@ class ChatInputBar extends StatefulWidget {
     required this.onAttach,
     required this.onRemoveAttachment,
     super.key,
+    this.isListening = false,
     this.onMic,
+    this.onMicStop,
   });
   final TextEditingController controller;
   final bool isGenerating;
@@ -19,9 +21,11 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback onSend;
   final VoidCallback onAttach;
   final VoidCallback onRemoveAttachment;
+  final bool isListening;
 
   /// Called when mic icon is tapped (voice feature — Phase 2 wires this up).
   final VoidCallback? onMic;
+  final VoidCallback? onMicStop;
 
   @override
   State<ChatInputBar> createState() => _ChatInputBarState();
@@ -141,21 +145,29 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 ),
                 const SizedBox(width: 8),
 
-                // Mic or Send button
+                // Mic or Send button — while listening, always show mic/stop
+                // so streaming partial text doesn't hide the stop control.
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 150),
-                  child: _hasText
-                      ? _SendBtn(
-                          key: const ValueKey('send'),
-                          isGenerating: widget.isGenerating,
-                          onTap: widget.onSend,
+                  child: widget.isListening
+                      ? _MicBtn(
+                          key: const ValueKey('mic-listening'),
+                          isListening: true,
+                          onTap: widget.onMicStop,
                         )
-                      : _IconBtn(
-                          key: const ValueKey('mic'),
-                          icon: Icons.mic_none_rounded,
-                          tooltip: 'Voice input',
-                          onTap: widget.isGenerating ? null : widget.onMic,
-                        ),
+                      : _hasText
+                          ? _SendBtn(
+                              key: const ValueKey('send'),
+                              isGenerating: widget.isGenerating,
+                              onTap: widget.onSend,
+                            )
+                          : _MicBtn(
+                              key: const ValueKey('mic'),
+                              isListening: false,
+                              onTap: widget.isGenerating
+                                  ? null
+                                  : widget.onMic,
+                            ),
                 ),
               ],
             ),
@@ -170,7 +182,6 @@ class _IconBtn extends StatelessWidget {
   const _IconBtn({
     required this.icon,
     required this.tooltip,
-    super.key,
     this.onTap,
   });
   final IconData icon;
@@ -234,6 +245,93 @@ class _SendBtn extends StatelessWidget {
                 size: 20,
                 color: Theme.of(context).scaffoldBackgroundColor,
               ),
+      ),
+    );
+  }
+}
+
+class _MicBtn extends StatefulWidget {
+  const _MicBtn({
+    required this.isListening,
+    this.onTap,
+    super.key,
+  });
+  final bool isListening;
+  final VoidCallback? onTap;
+
+  @override
+  State<_MicBtn> createState() => _MicBtnState();
+}
+
+class _MicBtnState extends State<_MicBtn> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (widget.isListening) _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_MicBtn oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isListening && !oldWidget.isListening) {
+      _ctrl.repeat(reverse: true);
+    } else if (!widget.isListening && oldWidget.isListening) {
+      _ctrl.stop();
+      _ctrl.value = 0.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.isListening ? 'Stop listening' : 'Voice input',
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (context, child) {
+            final scale = 1.0 + (_ctrl.value * 0.15);
+            return Transform.scale(
+              scale: widget.isListening ? scale : 1.0,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: widget.isListening
+                      ? AppTheme.accent.withValues(alpha: 0.2)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                  border: widget.isListening
+                      ? Border.all(color: AppTheme.accent, width: 2)
+                      : null,
+                ),
+                child: Icon(
+                  widget.isListening
+                      ? Icons.mic_rounded
+                      : Icons.mic_none_rounded,
+                  size: 20,
+                  color: widget.isListening
+                      ? AppTheme.accent
+                      : (widget.onTap != null
+                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                          : Theme.of(context).disabledColor),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

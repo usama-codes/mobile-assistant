@@ -142,6 +142,12 @@ class MemoryRepositoryImpl implements MemoryRepository {
   }) async {
     final queryEmbedding = await EmbeddingService.getEmbedding(query);
 
+    // Local embeddings unavailable (model not yet downloaded) → keyword
+    // fallback over memory text so search never silently returns nothing.
+    if (queryEmbedding == null) {
+      return _keywordSearchMemories(query, limit);
+    }
+
     // Use ObjectBox native vector search
     // We request a bit more limit, then rerank with recency/importance
     final qb = _box.query(
@@ -200,5 +206,37 @@ class MemoryRepositoryImpl implements MemoryRepository {
         .take(limit)
         .map((m) => m['fact'] as dom.MemoryFact)
         .toList();
+  }
+
+  /// Keyword fallback when the local embedding model is unavailable.
+  /// Substring-matches decrypted memory facts, newest first.
+  Future<List<dom.MemoryFact>> _keywordSearchMemories(
+    String query,
+    int limit,
+  ) async {
+    final needle = query.trim().toLowerCase();
+    final matches = <dom.MemoryFact>[];
+    for (final entity in _box.getAll()) {
+      var fact = entity.fact;
+      if (VaultService.instance.isEncrypted(fact)) {
+        try {
+          fact = await VaultService.instance.decrypt(fact);
+        } catch (e) {
+          continue;
+        }
+      }
+      if (needle.isEmpty || fact.toLowerCase().contains(needle)) {
+        matches.add(
+          dom.MemoryFact(
+            id: entity.id,
+            fact: fact,
+            importance: entity.importance,
+            createdAt: entity.createdAt,
+          ),
+        );
+      }
+    }
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches.take(limit).toList();
   }
 }

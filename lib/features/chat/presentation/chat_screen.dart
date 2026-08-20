@@ -1,8 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/features/chat/presentation/chat_provider.dart';
+import 'package:mobile_assistant/features/chat/presentation/providers/voice_provider.dart';
+import 'package:mobile_assistant/features/chat/presentation/widgets/action_confirmation_card.dart';
 import 'package:mobile_assistant/features/chat/presentation/widgets/agent_action_card.dart';
 import 'package:mobile_assistant/features/chat/presentation/widgets/chat_input_bar.dart';
 import 'package:mobile_assistant/features/chat/presentation/widgets/message_bubble.dart';
@@ -80,8 +85,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             const _SheetOption(
               icon: Icons.camera_alt_outlined,
-              label: 'Scan document (OCR)',
+              label: 'Scan document (Camera OCR)',
               value: 'ocr',
+            ),
+            const _SheetOption(
+              icon: Icons.insert_drive_file_outlined,
+              label: 'Choose file (PDF/Text)',
+              value: 'file',
             ),
             const SizedBox(height: 8),
           ],
@@ -90,31 +100,66 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
     if (action == null || !mounted) return;
 
-    final source = action == 'gallery'
-        ? ImageSource.gallery
-        : ImageSource.camera;
-    final xfile = await _picker.pickImage(source: source, imageQuality: 85);
-    if (xfile == null || !mounted) return;
-
     final notifier = ref.read(chatNotifierProvider.notifier);
-    if (action == 'ocr') {
-      final prompt = await notifier.processImageAttachment(xfile.path);
-      if (prompt != null && mounted) {
-        _inputCtrl.text = prompt;
+
+    if (action == 'file') {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt', 'md', 'csv'],
+      );
+      if (result != null && result.files.single.path != null) {
+        final path = result.files.single.path!;
+        String text = '';
+        if (path.toLowerCase().endsWith('.pdf')) {
+          final bytes = File(path).readAsBytesSync();
+          final PdfDocument document = PdfDocument(inputBytes: bytes);
+          text = PdfTextExtractor(document).extractText();
+          document.dispose();
+        } else {
+          text = await File(path).readAsString();
+        }
+        if (mounted && text.isNotEmpty) {
+          _inputCtrl.text = text;
+        }
       }
     } else {
-      notifier.attachImage(xfile.path);
+      final source = action == 'gallery'
+          ? ImageSource.gallery
+          : ImageSource.camera;
+      final xfile = await _picker.pickImage(source: source, imageQuality: 85);
+      if (xfile == null || !mounted) return;
+
+      if (action == 'ocr') {
+        final prompt = await notifier.processImageAttachment(xfile.path);
+        if (prompt != null && mounted) {
+          _inputCtrl.text = prompt;
+        }
+      } else {
+        notifier.attachImage(xfile.path);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chatNotifierProvider);
+    final voiceState = ref.watch(voiceNotifierProvider);
 
     // Auto-scroll when new messages arrive
     ref.listen(chatNotifierProvider, (prev, next) {
       if ((prev?.messages.length ?? 0) < next.messages.length) {
         _scrollToBottom();
+      }
+    });
+
+    // Live STT streaming: sync partial transcript into the input field
+    ref.listen(voiceNotifierProvider, (prev, next) {
+      if (next.isListening && next.transcript.isNotEmpty && mounted) {
+        _inputCtrl
+          ..text = next.transcript
+          ..selection = TextSelection.fromPosition(
+            TextPosition(offset: next.transcript.length),
+          );
       }
     });
 
@@ -135,6 +180,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Message list
           Expanded(child: _buildMessageList(state)),
 
+          // Action confirmation card — shown when the pipeline proposes an action
+          if (state.pendingAction != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: ActionConfirmationCard(
+                proposal: state.pendingAction!,
+                onConfirm: (p) =>
+                    ref.read(chatNotifierProvider.notifier).confirmAction(p),
+                onCancel: () =>
+                    ref.read(chatNotifierProvider.notifier).cancelAction(),
+              ),
+            ),
+
           // Input bar
           ChatInputBar(
             controller: _inputCtrl,
@@ -144,10 +202,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onAttach: _pickAndAttach,
             onRemoveAttachment: () =>
                 ref.read(chatNotifierProvider.notifier).removeAttachment(),
-            onMic: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Voice input coming in Phase 2')),
-              );
+            isListening: voiceState.isListening,
+            onMic: () async {
+              final err = await ref.read(voiceNotifierProvider.notifier).startListening();
+              if (err.isNotEmpty && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(err),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+            onMicStop: () async {
+              await ref.read(voiceNotifierProvider.notifier).stopListening();
+              final transcript =
+                  ref.read(voiceNotifierProvider.notifier).consumeTranscript();
+              if (transcript.isNotEmpty) {
+                _inputCtrl.text = transcript;
+                _sendMessage();
+              }
             },
           ),
         ],

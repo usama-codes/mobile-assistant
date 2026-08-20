@@ -15,6 +15,16 @@ class NotificationService {
   Future<void> initialize() async {
     try {
       tz.initializeTimeZones();
+      try {
+        // Use the system timezone abbreviation to find the matching IANA location
+        final tzAbbr = DateTime.now().timeZoneName;
+        final match = tz.timeZoneDatabase.locations.entries
+            .firstWhere(
+              (e) => e.value.currentTimeZone.abbreviation == tzAbbr,
+              orElse: () => tz.timeZoneDatabase.locations.entries.first,
+            );
+        tz.setLocalLocation(match.value);
+      } catch (_) {}
 
       const initializationSettingsAndroid = AndroidInitializationSettings(
         '@mipmap/ic_launcher',

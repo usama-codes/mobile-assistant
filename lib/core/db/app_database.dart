@@ -20,7 +20,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 7,
+      version: 11,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -81,6 +81,56 @@ CREATE TABLE documents(
 
     if (oldVersion < 7) {
       await db.execute('ALTER TABLE documents ADD COLUMN embedding TEXT');
+    }
+
+    if (oldVersion < 8) {
+      await db.execute('''
+CREATE TABLE document_chunks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        documentId INTEGER NOT NULL,
+        chunkIndex INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        embedding TEXT,
+        FOREIGN KEY(documentId) REFERENCES documents(id) ON DELETE CASCADE
+      )''');
+    }
+
+    if (oldVersion < 9) {
+      await db.execute('''
+CREATE TABLE IF NOT EXISTS expenses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL,
+        vendor TEXT,
+        date TEXT,
+        category TEXT,
+        rawText TEXT,
+        createdAt TEXT
+      )''');
+    }
+
+    if (oldVersion < 10) {
+      try {
+        await db.execute('ALTER TABLE documents ADD COLUMN createdAt TEXT');
+      } catch (_) {}
+
+      await db.execute('''
+CREATE TABLE IF NOT EXISTS expenses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL,
+        vendor TEXT,
+        date TEXT,
+        category TEXT,
+        rawText TEXT,
+        createdAt TEXT
+      )''');
+    }
+
+    if (oldVersion < 11) {
+      try {
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN is_encrypted INTEGER DEFAULT 0',
+        );
+      } catch (_) {}
     }
   }
 
@@ -164,7 +214,29 @@ CREATE TABLE documents(
       document_type TEXT,
       file_path TEXT,
       createdAt TEXT,
-      embedding TEXT
+      embedding TEXT,
+      is_encrypted INTEGER DEFAULT 0
+    )''');
+
+    await db.execute('''
+CREATE TABLE document_chunks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      documentId INTEGER NOT NULL,
+      chunkIndex INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      embedding TEXT,
+      FOREIGN KEY(documentId) REFERENCES documents(id) ON DELETE CASCADE
+    )''');
+
+    await db.execute('''
+CREATE TABLE expenses(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      amount REAL,
+      vendor TEXT,
+      date TEXT,
+      category TEXT,
+      rawText TEXT,
+      createdAt TEXT
     )''');
   }
 }

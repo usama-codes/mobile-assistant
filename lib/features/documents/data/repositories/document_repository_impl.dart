@@ -42,6 +42,7 @@ class DocumentRepositoryImpl implements DocumentRepository {
         createdAt: DateTime.parse(
           row.createdAt ?? DateTime.now().toIso8601String(),
         ),
+        isEncrypted: row.isEncrypted == 1,
       );
     }).toList();
   }

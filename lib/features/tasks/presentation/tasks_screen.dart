@@ -566,9 +566,7 @@ Future<void> _showTaskSheet(
                     final date = await showDatePicker(
                       context: ctx,
                       initialDate: dueDate,
-                      firstDate: DateTime.now().subtract(
-                        const Duration(days: 1),
-                      ),
+                      firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(
                         const Duration(days: 365 * 5),
                       ),
@@ -582,14 +580,29 @@ Future<void> _showTaskSheet(
                       builder: (_, child) =>
                           Theme(data: AppTheme.dark, child: child!),
                     );
+                    final newDueDate = DateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      time?.hour ?? dueDate.hour,
+                      time?.minute ?? dueDate.minute,
+                    );
+
+                    // Prevent setting a task due date in the past
+                    if (newDueDate.isBefore(DateTime.now())) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Task due date cannot be in the past'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
                     setSt(() {
-                      dueDate = DateTime(
-                        date.year,
-                        date.month,
-                        date.day,
-                        time?.hour ?? dueDate.hour,
-                        time?.minute ?? dueDate.minute,
-                      );
+                      dueDate = newDueDate;
                     });
                   },
                 ),

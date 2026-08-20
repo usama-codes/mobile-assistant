@@ -16,6 +16,7 @@ _DocumentItem _$DocumentItemFromJson(Map<String, dynamic> json) =>
       documentType: json['documentType'] as String,
       filePath: json['filePath'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      isEncrypted: json['isEncrypted'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$DocumentItemToJson(_DocumentItem instance) =>
@@ -28,4 +29,5 @@ Map<String, dynamic> _$DocumentItemToJson(_DocumentItem instance) =>
       'documentType': instance.documentType,
       'filePath': instance.filePath,
       'createdAt': instance.createdAt.toIso8601String(),
+      'isEncrypted': instance.isEncrypted,
     };

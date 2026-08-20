@@ -1,5 +1,6 @@
 // ignore_for_file: unused_local_variable, unnecessary_null_comparison
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,15 +9,19 @@ import 'package:google_generative_ai/google_generative_ai.dart'
     show ChatSession;
 import 'package:google_generative_ai/google_generative_ai.dart'
     hide ChatSession;
+import 'package:mobile_assistant/core/agent/action_extractor.dart';
 import 'package:mobile_assistant/core/agent/agent_service.dart';
 import 'package:mobile_assistant/core/agent/tools/document_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/memory_tool.dart';
 import 'package:mobile_assistant/core/services/analytics_service.dart';
+import 'package:mobile_assistant/core/services/voice_service.dart';
 import 'package:mobile_assistant/core/services/inference_service.dart';
 import 'package:mobile_assistant/core/services/ocr_service.dart';
 import 'package:mobile_assistant/features/chat/data/chat_repository.dart';
 import 'package:mobile_assistant/features/memory/presentation/providers/memory_providers.dart';
+import 'package:mobile_assistant/features/settings/presentation/settings_provider.dart';
 import 'package:mobile_assistant/features/tasks/presentation/tasks_provider.dart';
+import 'package:mobile_assistant/shared/models/action_proposal.dart';
 import 'package:mobile_assistant/shared/models/agent_step.dart';
 import 'package:mobile_assistant/shared/models/chat_message.dart';
 import 'package:mobile_assistant/shared/models/chat_session.dart';
@@ -35,6 +40,7 @@ class ChatState {
     this.pendingAttachmentPath,
     this.selectedImagePath,
     this.isProcessingImage = false,
+    this.pendingAction,
   });
   final List<ChatSession> sessions;
   final ChatSession? currentSession;
@@ -46,6 +52,9 @@ class ChatState {
   final String? selectedImagePath;
   final bool isProcessingImage;
 
+  /// A proposed action awaiting user confirmation before any write.
+  final ActionProposal? pendingAction;
+
   ChatState copyWith({
     List<ChatSession>? sessions,
     ChatSession? currentSession,
@@ -56,9 +65,11 @@ class ChatState {
     String? pendingAttachmentPath,
     String? selectedImagePath,
     bool? isProcessingImage,
+    ActionProposal? pendingAction,
     bool clearError = false,
     bool clearAttachment = false,
     bool clearSelectedImage = false,
+    bool clearPendingAction = false,
   }) {
     return ChatState(
       sessions: sessions ?? this.sessions,
@@ -74,6 +85,9 @@ class ChatState {
           ? null
           : (selectedImagePath ?? this.selectedImagePath),
       isProcessingImage: isProcessingImage ?? this.isProcessingImage,
+      pendingAction: clearPendingAction
+          ? null
+          : (pendingAction ?? this.pendingAction),
     );
   }
 }
@@ -94,17 +108,11 @@ class ChatNotifier extends _$ChatNotifier {
 
   Future<void> _init() async {
     final sessions = await _repository.getSessions();
-    ChatSession current;
-    List<ChatSession> allSessions;
-
-    if (sessions.isNotEmpty) {
-      current = sessions.first;
-      allSessions = sessions;
-    } else {
-      current = ChatSession(title: 'New Chat', createdAt: DateTime.now());
-      current = await _repository.insertSession(current);
-      allSessions = [current];
-    }
+    
+    var current = ChatSession(title: 'New Chat', createdAt: DateTime.now());
+    current = await _repository.insertSession(current);
+    
+    final allSessions = [current, ...sessions];
 
     state = state.copyWith(
       sessions: allSessions,
@@ -112,33 +120,8 @@ class ChatNotifier extends _$ChatNotifier {
       messages: [],
       currentPlan: [],
     );
-
-    if (sessions.isNotEmpty) {
-      await loadMessages();
-      await _cleanupAndResume();
-    }
   }
 
-  Future<void> _cleanupAndResume() async {
-    final messages = state.messages;
-    if (messages.isEmpty) return;
-
-    final hiMessages = messages
-        .where((m) => m.content.toLowerCase().trim() == 'hi' && m.isUser)
-        .toList();
-    if (hiMessages.length > 1) {
-      for (int i = 0; i < hiMessages.length - 1; i++) {
-        if (hiMessages[i].id != null) {
-          await _repository.deleteMessage(hiMessages[i].id!);
-        }
-      }
-      await loadMessages();
-    }
-
-    if (state.messages.isNotEmpty && state.messages.last.isUser) {
-      _generateAssistantResponse();
-    }
-  }
 
   void setError(String err) {
     state = state.copyWith(modelError: err);
@@ -146,6 +129,97 @@ class ChatNotifier extends _$ChatNotifier {
 
   void clearErrors() {
     state = state.copyWith(clearError: true);
+  }
+
+  // ── Action confirmation gate ─────────────────────────────────────────────
+  Completer<ActionProposal?>? _confirmationCompleter;
+
+  /// Show the confirmation card and suspend execution until the user decides.
+  Future<ActionProposal?> _awaitConfirmation(ActionProposal proposal) async {
+    _confirmationCompleter = Completer<ActionProposal?>();
+    state = state.copyWith(pendingAction: proposal);
+    final confirmed = await _confirmationCompleter!.future;
+    _confirmationCompleter = null;
+    state = state.copyWith(clearPendingAction: true);
+    return confirmed;
+  }
+
+  /// User tapped ✅ Confirm on the action card — deliver proposal upstream.
+  void confirmAction(ActionProposal confirmed) {
+    _confirmationCompleter?.complete(confirmed);
+  }
+
+  /// User tapped ❌ Cancel on the action card — discard the proposal.
+  void cancelAction() {
+    _confirmationCompleter?.complete(null);
+  }
+
+  /// Build an [ActionProposal] from a cloud model function call so it can be
+  /// reviewed before any calendar write.
+  ActionProposal? _proposalFromFunctionCall(FunctionCall call) {
+    final args = call.args;
+    final title = args['title'] as String?;
+    if (title == null || title.trim().isEmpty) return null;
+
+    final start = _parseDateArg(args['startDate']);
+    final end = _parseDateArg(args['endDate']) ??
+        (start?.add(const Duration(hours: 1)));
+    return ActionProposal(
+      action: call.name,
+      title: title.trim(),
+      startDate: start,
+      endDate: end,
+      description: args['description'] as String?,
+      location: args['location'] as String?,
+      confidence: 0.85, // model-initiated calls are explicit intents
+    );
+  }
+
+  DateTime? _parseDateArg(dynamic value) {
+    if (value == null) return null;
+    try {
+      return DateTime.parse(value as String);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Execute a confirmed proposal through the agent tool registry.
+  Future<Map<String, Object?>> _executeProposal(
+    ActionProposal proposal,
+  ) async {
+    final agentService = ref.read(agentServiceProvider);
+    switch (proposal.action) {
+      case 'create_calendar_event':
+        return agentService.dispatchFunctionCall(
+          FunctionCall('create_calendar_event', proposal.toCalendarParams()),
+        );
+      case 'create_task':
+        return agentService.dispatchFunctionCall(
+          FunctionCall('create_task', proposal.toTaskParams()),
+        );
+      case 'log_expense':
+        return agentService.dispatchFunctionCall(
+          FunctionCall('log_expense', proposal.toExpenseParams()),
+        );
+      default:
+        return {'error': 'Unknown action: ${proposal.action}'};
+    }
+  }
+
+  /// Run a confirmed proposal, tracking progress as a plan step.
+  Future<void> _executeProposalAndRecord(ActionProposal proposal) async {
+    final plan = List<AgentStep>.from(state.currentPlan);
+    plan.add(AgentStep('Executing ${proposal.action}...'));
+    state = state.copyWith(currentPlan: plan);
+
+    final result = await _executeProposal(proposal);
+
+    final updatedPlan = List<AgentStep>.from(state.currentPlan);
+    updatedPlan.last.isCompleted = true;
+    updatedPlan.last.result =
+        result['result']?.toString() ?? result['error']?.toString();
+    state = state.copyWith(currentPlan: updatedPlan);
   }
 
   Future<void> createNewSession() async {
@@ -194,9 +268,9 @@ class ChatNotifier extends _$ChatNotifier {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) return;
       final fallbackModels = [
-        'gemini-2.5-flash-lite-preview-06-17',
         'gemini-2.5-flash',
-        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.5-flash-lite-preview-06-17',
       ];
       GenerateContentResponse? response;
 
@@ -269,6 +343,9 @@ class ChatNotifier extends _$ChatNotifier {
     state = state.copyWith(isGenerating: true);
 
     try {
+      // Lazy-load Gemma on first inference (deferred from startup).
+      await InferenceService.instance.warmUp();
+
       final svc = InferenceService.instance;
       final isLocalOnly = svc.strategy == InferenceStrategy.localOnly;
 
@@ -310,6 +387,22 @@ class ChatNotifier extends _$ChatNotifier {
         logger.w('Failed to fetch RAG context (offline or error)', error: e);
       }
 
+      // ── PRIVACY BOUNDARY ────────────────────────────────────────────────
+      // Retrieved document content must NEVER reach a cloud API. If relevant
+      // documents were found, the answer is generated on-device regardless of
+      // the configured strategy. If the local model isn't available, tell the
+      // user why rather than silently leaking content to the cloud.
+      final hasDocContext = documentContext.isNotEmpty;
+      if (hasDocContext && !svc.isLocalModelLoaded) {
+        setError(
+          'This question references your saved documents. '
+          'Document-aware answers are generated on-device for privacy — '
+          'enable the local Gemma model in Settings to continue.',
+        );
+        return;
+      }
+      final mustUseLocal = isLocalOnly || hasDocContext;
+
       final systemInstruction =
           '''
 You are a proactive local agent. Use the provided tools to fulfill requests.
@@ -325,15 +418,17 @@ $documentContext
 - For highly complex or multi-part requests, call the `create_execution_plan` tool FIRST to state your plan before executing the actual actions.
 - You may execute multiple tool calls simultaneously if the user asks you to perform multiple actions at once.
 - Proactively use the `remember_fact` tool to save any user preferences, long-term goals, or recurring interests you notice in the conversation. Ask first using `ask_user` if the information seems highly sensitive.
+- Proactively use calendar tools to manage the user's schedule and events.
+- Proactively use expense tools to track financial transactions when mentioned.
 - Only invoke tools if an action is requested. If the user asks a general question, just reply.
 - Use `ask_user` if a request is highly ambiguous (e.g., "Schedule a meeting on Friday" when there are multiple Fridays).
 - Always calculate relative dates accurately based on Current time.
 ''';
 
       final fallbackModels = [
-        'gemini-2.5-flash-lite-preview-06-17',
         'gemini-2.5-flash',
-        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.5-flash-lite-preview-06-17',
       ];
       InferenceResponse? inferenceResponse;
       gen_ai.ChatSession? aiChatSession;
@@ -369,7 +464,11 @@ $documentContext
 
       // final isLocalOnly = svc.strategy == InferenceStrategy.localOnly;
 
-      if (isLocalOnly) {
+      if (mustUseLocal) {
+        // Force local generation — either the user chose local-only, or
+        // document context requires on-device answers for privacy.
+        final previous = svc.strategy;
+        if (!isLocalOnly) svc.strategy = InferenceStrategy.localOnly;
         try {
           inferenceResponse = await InferenceService.instance
               .generateChatResponse(
@@ -384,6 +483,8 @@ $documentContext
           logger.w('Local Inference failed', error: e);
           setError('Local generation failed: $e');
           return;
+        } finally {
+          if (!isLocalOnly) svc.strategy = previous;
         }
       } else {
         for (final modelName in fallbackModels) {
@@ -437,14 +538,16 @@ $documentContext
             return;
           }
         } else {
-          if (lastException.toString().toLowerCase().contains('spike') ||
-              lastException.toString().contains('503') ||
-              lastException.toString().toLowerCase().contains('overloaded')) {
+          final errStr = lastException?.toString() ?? 'Unknown error';
+          if (errStr.toLowerCase().contains('spike') ||
+              errStr.contains('503') ||
+              errStr.toLowerCase().contains('overloaded')) {
             setError(
               'All cloud models are currently overloaded. Please try again later or switch to local inference.',
             );
           } else {
-            setError('Failed to generate response. Please try again.');
+            // Show the real error so we can diagnose it
+            setError('API Error: $errStr');
           }
           return;
         }
@@ -478,6 +581,43 @@ $documentContext
               }),
             );
             continue;
+          }
+
+          // ── Confirm gate: no calendar write without explicit user OK ────
+          if (call.name == 'create_calendar_event') {
+            final proposal = _proposalFromFunctionCall(call);
+            if (proposal != null) {
+              final confirmed = await _awaitConfirmation(proposal);
+              if (confirmed == null) {
+                functionResponses.add(
+                  FunctionResponse(call.name, {
+                    'result': 'cancelled',
+                    'message':
+                        'The user declined to create this calendar event.',
+                  }),
+                );
+                continue;
+              }
+              final gatePlan = List<AgentStep>.from(state.currentPlan);
+              gatePlan.add(AgentStep('Creating calendar event...'));
+              state = state.copyWith(currentPlan: gatePlan);
+
+              final gateResult = await ref
+                  .read(agentServiceProvider)
+                  .dispatchFunctionCall(
+                    FunctionCall(call.name, confirmed.toCalendarParams()),
+                  );
+
+              final gateUpdated = List<AgentStep>.from(state.currentPlan);
+              gateUpdated.last.isCompleted = true;
+              gateUpdated.last.result = gateResult['result']?.toString() ??
+                  gateResult['error']?.toString();
+              state = state.copyWith(currentPlan: gateUpdated);
+
+              functionResponses.add(FunctionResponse(call.name, gateResult));
+              continue;
+            }
+            // Fall through to normal execution if proposal parsing failed
           }
 
           // Add step to UI
@@ -522,9 +662,33 @@ $documentContext
         }
       }
 
+      // Local-only path: Gemma returns plain text (no function calls), so the
+      // extraction → confirm pipeline is the sole mechanism for tool actions.
+      if (inferenceResponse.isLocal) {
+        try {
+          final proposal = await ActionExtractor.extract(
+            userMessage: prompt,
+            documentContext: documentContext,
+            memoryContext: memoryContext,
+          );
+          if (proposal != null) {
+            final confirmed = await _awaitConfirmation(proposal);
+            if (confirmed != null) {
+              await _executeProposalAndRecord(confirmed);
+            }
+          }
+        } catch (e) {
+          logger.w('Local action extraction failed', error: e);
+        }
+      }
+
       final finalResponseText = responseText?.trim();
       if (finalResponseText != null && finalResponseText.isNotEmpty) {
         await _addAssistantMessage(finalResponseText);
+        final settings = await ref.read(settingsProvider.future);
+        if (settings.isTtsEnabled) {
+          VoiceService.instance.speak(finalResponseText);
+        }
       }
     } catch (e) {
       setError('Error: $e');
@@ -566,7 +730,7 @@ $documentContext
 
     try {
       final extractedText = await OCRService.extractTextFromImage(imagePath);
-      return 'I have scanned a document. Text extracted via OCR:\n\n$extractedText\n\nPlease analyze this document, summarize it, and save it to the knowledge base using the DocumentTool.';
+      return 'I have scanned a document. Raw OCR text:\n\n$extractedText\n\nPlease do the following based on the document content:\n1. If it looks like a **receipt or invoice**: extract the total amount, vendor name, date, and category (food/transport/shopping/etc) and call log_expense to record it.\n2. If it looks like a **general document, note, or article**: create a clean, well-structured summary that captures the key information, then call create_document to save that summary (NOT the raw text) to the knowledge base with an appropriate title and folder.\n3. Tell me what you found and what you did.';
     } catch (e) {
       setError('OCR Error: $e');
       return null;

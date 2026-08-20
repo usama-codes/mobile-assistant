@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:mobile_assistant/core/agent/tool_registry.dart';
+import 'package:mobile_assistant/core/agent/tools/calendar_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/document_tool.dart';
+import 'package:mobile_assistant/core/agent/tools/expense_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/memory_tool.dart';
 import 'package:mobile_assistant/core/agent/tools/task_tool.dart';
+import 'package:mobile_assistant/core/db/expense_repository.dart';
 import 'package:mobile_assistant/features/memory/presentation/providers/memory_providers.dart';
 import 'package:mobile_assistant/features/tasks/data/task_repository.dart';
 
@@ -71,16 +74,19 @@ class AgentService {
 }
 
 final toolRegistryProvider = Provider<ToolRegistry>((ref) {
-  final registry = ToolRegistry();
   // Inject proper repositories so tools use the correct data layer:
   // - TaskTool now uses Drift (reactive streams → UI auto-updates)
   // - MemoryTool now uses ObjectBox (fixes memories being lost to dropped table)
   final taskRepo = ref.watch(taskRepositoryProvider);
   final memoryRepo = ref.watch(memoryRepositoryProvider);
+  final expenseRepo = ExpenseRepository();
+  final registry = ToolRegistry();
   registry.registerTools([
     TaskTool(taskRepo),
     MemoryTool(memoryRepo),
     DocumentTool(),
+    CalendarTool(),
+    ExpenseTool(expenseRepo),
   ]);
   return registry;
 });

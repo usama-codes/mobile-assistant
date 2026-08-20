@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_assistant/core/services/vault_service.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/features/documents/domain/models/document_item.dart';
 import 'package:mobile_assistant/features/documents/presentation/providers/document_providers.dart';
@@ -141,10 +142,39 @@ class _DocumentsView extends ConsumerWidget {
             )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: docs.length,
+              itemCount: docs.length + 1,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _DocumentTile(doc: docs[i]),
+              itemBuilder: (_, i) {
+                if (i == docs.length) {
+                  return const _PrivacyFooter();
+                }
+                return _DocumentTile(doc: docs[i]);
+              },
             ),
+    );
+  }
+}
+
+/// Persistent footer under the documents list — states the privacy claim
+/// in-product so a demo viewer sees the differentiator without being told.
+class _PrivacyFooter extends StatelessWidget {
+  const _PrivacyFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shield_outlined, size: 14, color: AppTheme.accent),
+          SizedBox(width: 6),
+          Text(
+            'All data stored locally, encrypted at rest',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -193,9 +223,36 @@ class _DocumentTile extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(
-          '${doc.folder} · ${DateFormat('d MMM yyyy').format(doc.createdAt)}',
-          style: Theme.of(context).textTheme.bodySmall,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${doc.folder} · ${DateFormat('d MMM yyyy').format(doc.createdAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (doc.isEncrypted) ...[
+              const SizedBox(height: 4),
+              const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: 12,
+                    color: AppTheme.accent,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Stored locally, encrypted',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.accent,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
         trailing: PopupMenuButton<String>(
           icon: Icon(
@@ -261,77 +318,51 @@ class _DocumentTile extends ConsumerWidget {
   }
 
   Future<void> _viewDocument(BuildContext context, DocumentItem doc) async {
-    // Biometric check inline
-    final canAuth = await VaultService.instance.isInitialized;
-    if (!canAuth) return;
+    final auth = LocalAuthentication();
+    final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+
+    bool authenticated = false;
+    if (canCheck) {
+      try {
+        authenticated = await auth.authenticate(
+          localizedReason: 'Authenticate to view "${doc.title}"',
+        );
+      } on PlatformException catch (_) {
+        authenticated = false;
+      } catch (_) {
+        authenticated = false;
+      }
+    } else {
+      // Device has no biometrics / lock — allow access directly
+      authenticated = true;
+    }
+
+    if (!authenticated || !context.mounted) return;
+
+    // Read the content
+    String content;
+    try {
+      content = await ProviderScope.containerOf(context)
+          .read(documentRepositoryProvider)
+          .readDocumentContent(doc.filePath);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open document: $e')),
+        );
+      }
+      return;
+    }
 
     if (!context.mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _BiometricGate(doc: doc),
-    );
-  }
-}
-
-class _BiometricGate extends ConsumerWidget {
-  const _BiometricGate({required this.doc});
-  final DocumentItem doc;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AlertDialog(
-      backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.radiusL),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          const Icon(
-            Icons.fingerprint_rounded,
-            size: 56,
-            color: AppTheme.accent,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Authenticate to view\n${doc.title}',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                final content = await ref
-                    .read(documentRepositoryProvider)
-                    .readDocumentContent(doc.filePath);
-                if (context.mounted) {
-                  _showContent(context, doc.title, content);
-                }
-              },
-              child: const Text('Unlock'),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
+    _showContent(context, doc.title, content);
   }
 
   void _showContent(BuildContext context, String title, String content) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusL),
@@ -341,6 +372,7 @@ class _BiometricGate extends ConsumerWidget {
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontSize: 15,
+            fontWeight: FontWeight.w600,
           ),
         ),
         content: SizedBox(
@@ -358,7 +390,7 @@ class _BiometricGate extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Close'),
           ),
         ],

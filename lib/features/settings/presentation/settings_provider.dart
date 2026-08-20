@@ -12,12 +12,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:background_downloader/background_downloader.dart';
+import 'package:mobile_assistant/core/services/profile_service.dart';
+import 'package:mobile_assistant/shared/models/user_profile.dart';
 
 part 'settings_provider.g.dart';
 
 class SettingsState {
   const SettingsState({
+    this.userProfile,
     this.isAppLockEnabled = false,
+    this.isTtsEnabled = true,
     this.themeMode = ThemeMode.dark,
     this.inferenceStrategy = 'hybrid',
     this.isBusy = false,
@@ -27,6 +31,7 @@ class SettingsState {
     this.downloadProgress = 0,
   });
   final bool isAppLockEnabled;
+  final bool isTtsEnabled;
   final ThemeMode themeMode;
   final String inferenceStrategy;
   final bool isBusy;
@@ -34,9 +39,12 @@ class SettingsState {
   final bool modelDownloadComplete;
   final bool isLocalModelLoaded;
   final int downloadProgress;
+  final UserProfile? userProfile;
 
   SettingsState copyWith({
+    UserProfile? userProfile,
     bool? isAppLockEnabled,
+    bool? isTtsEnabled,
     ThemeMode? themeMode,
     String? inferenceStrategy,
     bool? isBusy,
@@ -46,7 +54,9 @@ class SettingsState {
     int? downloadProgress,
   }) {
     return SettingsState(
+      userProfile: userProfile ?? this.userProfile,
       isAppLockEnabled: isAppLockEnabled ?? this.isAppLockEnabled,
+      isTtsEnabled: isTtsEnabled ?? this.isTtsEnabled,
       themeMode: themeMode ?? this.themeMode,
       inferenceStrategy: inferenceStrategy ?? this.inferenceStrategy,
       isBusy: isBusy ?? this.isBusy,
@@ -65,8 +75,11 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   @override
   Future<SettingsState> build() async {
+    final profile = await ProfileService.instance.getProfile();
     final isAppLockEnabled =
         await _storage.read(key: 'app_lock_enabled') == 'true';
+    final isTtsEnabled =
+        (await _storage.read(key: 'tts_enabled') ?? 'true') == 'true';
     final themeStr = await _storage.read(key: 'theme_mode');
 
     var mode = ThemeMode.dark;
@@ -89,10 +102,17 @@ class SettingsNotifier extends _$SettingsNotifier {
     }
 
     return SettingsState(
+      userProfile: profile,
       isAppLockEnabled: isAppLockEnabled,
+      isTtsEnabled: isTtsEnabled,
       themeMode: mode,
       inferenceStrategy: strategyStr,
     );
+  }
+
+  Future<void> updateProfile(UserProfile profile) async {
+    await ProfileService.instance.saveProfile(profile);
+    state = AsyncData(state.value!.copyWith(userProfile: profile));
   }
 
   Future<void> setInferenceStrategy(String strategy) async {
@@ -113,6 +133,11 @@ class SettingsNotifier extends _$SettingsNotifier {
   Future<void> toggleAppLock(bool value) async {
     state = AsyncData(state.value!.copyWith(isAppLockEnabled: value));
     await _storage.write(key: 'app_lock_enabled', value: value.toString());
+  }
+
+  Future<void> toggleTts(bool value) async {
+    state = AsyncData(state.value!.copyWith(isTtsEnabled: value));
+    await _storage.write(key: 'tts_enabled', value: value.toString());
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

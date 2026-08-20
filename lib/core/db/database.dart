@@ -44,6 +44,8 @@ class Documents extends Table {
   TextColumn get filePath => text().named('file_path').nullable()();
   TextColumn get createdAt => text().nullable()();
   TextColumn get embedding => text().nullable()();
+  IntColumn get isEncrypted =>
+      integer().named('is_encrypted').withDefault(const Constant(0))();
 }
 
 class InteractionLogs extends Table {
@@ -62,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -85,6 +87,12 @@ class AppDatabase extends _$AppDatabase {
           } catch (_) {}
           try {
             await m.addColumn(tasks, tasks.lastCompletedAt);
+          } catch (_) {}
+        }
+        if (from < 10) {
+          // Add is_encrypted flag to documents table
+          try {
+            await m.addColumn(documents, documents.isEncrypted);
           } catch (_) {}
         }
       },
