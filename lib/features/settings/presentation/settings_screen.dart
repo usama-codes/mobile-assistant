@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_assistant/core/services/inference_service.dart';
 import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/features/settings/presentation/settings_provider.dart';
 import 'package:mobile_assistant/l10n/app_localizations.dart';
@@ -112,7 +111,7 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
                       if (state.inferenceStrategy == 'local' &&
-                          !InferenceService.instance.isLocalModelLoaded)
+                          !state.isLocalModelLoaded)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Container(
@@ -134,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Local Gemma model not found. Place a compatible .bin or .task model file in the app storage, or switch to Hybrid/Cloud mode.',
+                                    'On-device model not downloaded. Tap "Local Model Status" below to download it, or switch to Hybrid/Cloud mode.',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: theme.textTheme.bodySmall?.color,
@@ -151,27 +150,16 @@ class SettingsScreen extends ConsumerWidget {
                   // Local Model Status & Instructions
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: state.modelDownloadComplete
-                        ? _buildSettingCard(
-                            theme: theme,
-                            icon: Icons.check_circle,
-                            title: 'Download Complete',
-                            subtitle:
-                                'Please restart the app to load the new model into memory.',
-                            trailing: Icon(
-                              Icons.refresh,
-                              color: theme.colorScheme.primary,
-                            ),
-                          )
-                        : _buildSettingCard(
+                    child: _buildSettingCard(
                             theme: theme,
                             icon: Icons.memory,
                             title: 'Local Model Status',
                             subtitle: state.isDownloadingModel
                                 ? 'Downloading Gemma model (1.35 GB) - ${state.downloadProgress}%'
-                                : InferenceService.instance.isLocalModelLoaded
+                                : state.isLocalModelLoaded
                                 ? 'Gemma model loaded and ready for offline use.'
-                                : 'Gemma model missing. Tap to download.',
+                                : state.modelError ??
+                                      'Gemma model missing. Tap to download.',
                             trailing: state.isDownloadingModel
                                 ? SizedBox(
                                     width: 24,
@@ -183,7 +171,7 @@ class SettingsScreen extends ConsumerWidget {
                                           : null,
                                     ),
                                   )
-                                : InferenceService.instance.isLocalModelLoaded
+                                : state.isLocalModelLoaded
                                 ? IconButton(
                                     icon: const Icon(
                                       Icons.delete_outline,
@@ -229,9 +217,7 @@ class SettingsScreen extends ConsumerWidget {
                                     color: AppTheme.accent,
                                   ),
                             onTap: () {
-                              if (!InferenceService
-                                      .instance
-                                      .isLocalModelLoaded &&
+                              if (!state.isLocalModelLoaded &&
                                   !state.isDownloadingModel) {
                                 ref
                                     .read(settingsProvider.notifier)

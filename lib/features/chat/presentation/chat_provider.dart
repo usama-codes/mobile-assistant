@@ -4,9 +4,6 @@ import 'dart:io';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart'
-    as gen_ai
-    show ChatSession;
-import 'package:google_generative_ai/google_generative_ai.dart'
     hide ChatSession;
 import 'package:mobile_assistant/core/agent/agent_service.dart';
 import 'package:mobile_assistant/core/agent/tools/document_tool.dart';
@@ -83,6 +80,12 @@ final ChatNotifierProvider chatNotifierProvider = chatProvider;
 
 @riverpod
 class ChatNotifier extends _$ChatNotifier {
+  static const _cloudModels = [
+    'gemini-2.5-flash-lite-preview-06-17',
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+  ];
+
   late ChatRepository _repository;
 
   @override
@@ -193,14 +196,9 @@ class ChatNotifier extends _$ChatNotifier {
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) return;
-      final fallbackModels = [
-        'gemini-2.5-flash-lite-preview-06-17',
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-      ];
       GenerateContentResponse? response;
 
-      for (final modelName in fallbackModels) {
+      for (final modelName in _cloudModels) {
         try {
           final model = GenerativeModel(model: modelName, apiKey: apiKey);
           response = await model.generateContent([
@@ -270,23 +268,7 @@ class ChatNotifier extends _$ChatNotifier {
 
     try {
       final svc = InferenceService.instance;
-      final isLocalOnly = svc.strategy == InferenceStrategy.localOnly;
-
-      // For local-only, verify model is available before anything else
-      if (isLocalOnly && !svc.isLocalModelLoaded) {
-        setError(
-          '⚠️ Local Gemma model is not loaded. Go to Settings → Inference Strategy and switch to Hybrid or Cloud mode.',
-        );
-        return;
-      }
-
       final apiKey = dotenv.env['GEMINI_API_KEY'];
-      if (!isLocalOnly && (apiKey == null || apiKey.isEmpty)) {
-        setError(
-          'API Key not found. Add your GEMINI_API_KEY to the .env file.',
-        );
-        return;
-      }
 
       final tasksAsync = ref.read(tasksProvider);
       final currentTasks = tasksAsync.value ?? [];
@@ -301,14 +283,15 @@ class ChatNotifier extends _$ChatNotifier {
       final memoryTool = MemoryTool(ref.read(memoryRepositoryProvider));
       final documentTool = DocumentTool();
 
-      String memoryContext = '';
-      String documentContext = '';
-      try {
-        memoryContext = await memoryTool.searchMemories(prompt);
-        documentContext = await documentTool.searchDocumentsRAG(prompt);
-      } catch (e) {
-        logger.w('Failed to fetch RAG context (offline or error)', error: e);
-      }
+      // RAG uses cloud embeddings, so skip it in local-only mode and don't
+      // let a slow or missing connection hold up the reply.
+      final useRag = svc.strategy != InferenceStrategy.localOnly;
+      final memoryContext = useRag
+          ? await _fetchContext(() => memoryTool.searchMemories(prompt))
+          : '';
+      final documentContext = useRag
+          ? await _fetchContext(() => documentTool.searchDocumentsRAG(prompt))
+          : '';
 
       final systemInstruction =
           '''
@@ -330,14 +313,14 @@ $documentContext
 - Always calculate relative dates accurately based on Current time.
 ''';
 
-      final fallbackModels = [
-        'gemini-2.5-flash-lite-preview-06-17',
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-      ];
-      InferenceResponse? inferenceResponse;
-      gen_ai.ChatSession? aiChatSession;
-      Exception? lastException;
+      final localSystemInstruction =
+          '''
+You are a helpful personal assistant running fully on the user's phone.
+Current time: ${DateTime.now().toIso8601String()}
+Pending tasks: [$tasksContext]
+Relevant memories: $memoryContext
+Answer briefly and clearly. You cannot create tasks or run tools in offline mode; if the user asks for an action, tell them what to do or to switch to cloud mode.
+''';
 
       final chatHistory = state.messages
           .where((m) => m.id != state.messages.last.id)
@@ -367,96 +350,29 @@ $documentContext
         requestContent = Content.text(prompt);
       }
 
-      // final isLocalOnly = svc.strategy == InferenceStrategy.localOnly;
-
-      if (isLocalOnly) {
-        try {
-          inferenceResponse = await InferenceService.instance
-              .generateChatResponse(
-                chatHistory: chatHistory,
-                prompt: requestContent,
-                systemInstruction: systemInstruction,
-                cloudModelName: '',
-                cloudApiKey: '',
-                tools: [ref.read(agentServiceProvider).getTools()],
-              );
-        } catch (e) {
-          logger.w('Local Inference failed', error: e);
-          setError('Local generation failed: $e');
-          return;
-        }
-      } else {
-        for (final modelName in fallbackModels) {
-          try {
-            inferenceResponse = await InferenceService.instance
-                .generateChatResponse(
-                  chatHistory: chatHistory,
-                  prompt: requestContent,
-                  systemInstruction: systemInstruction,
-                  cloudModelName: modelName,
-                  cloudApiKey: apiKey ?? '',
-                  tools: [ref.read(agentServiceProvider).getTools()],
-                );
-
-            aiChatSession = inferenceResponse.cloudSession;
-            break; // Success
-          } on Exception catch (e) {
-            lastException = e;
-            logger.w('Inference failed for $modelName', error: e);
-          }
-        }
+      final InferenceResponse inferenceResponse;
+      try {
+        inferenceResponse = await svc.generateChatResponse(
+          chatHistory: chatHistory,
+          prompt: requestContent,
+          systemInstruction: systemInstruction,
+          localSystemInstruction: localSystemInstruction,
+          cloudModelNames: _cloudModels,
+          cloudApiKey: apiKey,
+          tools: [ref.read(agentServiceProvider).getTools()],
+        );
+      } on InferenceException catch (e) {
+        setError(e.message);
+        return;
       }
 
-      if (inferenceResponse == null) {
-        // Cloud models failed. If we're in hybrid mode, attempt local fallback.
-        if (!isLocalOnly && svc.strategy == InferenceStrategy.hybrid) {
-          if (svc.isLocalModelLoaded) {
-            try {
-              // Re-route to generateChatResponse via local strategy trick
-              // We'll temporarily set strategy to localOnly for this call
-              final previous = svc.strategy;
-              svc.strategy = InferenceStrategy.localOnly;
-              inferenceResponse = await svc.generateChatResponse(
-                chatHistory: chatHistory,
-                prompt: requestContent,
-                systemInstruction: systemInstruction,
-                cloudModelName: '',
-                cloudApiKey: '',
-              );
-              svc.strategy = previous;
-            } catch (e) {
-              setError(
-                'Cloud failed (${lastException.toString()}) AND Local fallback failed: $e',
-              );
-              return;
-            }
-          } else {
-            setError(
-              'Cloud models failed (e.g. quota exceeded) and Local Gemma model is not loaded. Download it in Settings to enable offline fallback.',
-            );
-            return;
-          }
-        } else {
-          if (lastException.toString().toLowerCase().contains('spike') ||
-              lastException.toString().contains('503') ||
-              lastException.toString().toLowerCase().contains('overloaded')) {
-            setError(
-              'All cloud models are currently overloaded. Please try again later or switch to local inference.',
-            );
-          } else {
-            setError('Failed to generate response. Please try again.');
-          }
-          return;
-        }
-      }
-
-      if (inferenceResponse == null ||
-          (inferenceResponse.text == null &&
-              inferenceResponse.functionCalls.isEmpty)) {
+      if (inferenceResponse.text == null &&
+          inferenceResponse.functionCalls.isEmpty) {
         setError('Received empty response from assistant.');
         return;
       }
 
+      final aiChatSession = inferenceResponse.cloudSession;
       var currentFunctionCalls = inferenceResponse.functionCalls;
       var responseText = inferenceResponse.text;
 
@@ -530,6 +446,15 @@ $documentContext
       setError('Error: $e');
     } finally {
       state = state.copyWith(isGenerating: false);
+    }
+  }
+
+  Future<String> _fetchContext(Future<String> Function() fetch) async {
+    try {
+      return await fetch().timeout(const Duration(seconds: 8));
+    } catch (e) {
+      logger.w('Failed to fetch RAG context (offline or error)', error: e);
+      return '';
     }
   }
 

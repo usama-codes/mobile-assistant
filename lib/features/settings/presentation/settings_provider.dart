@@ -2,16 +2,13 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile_assistant/core/db/database.dart' show getDatabasesPath;
 import 'package:mobile_assistant/core/providers/database_provider.dart';
 import 'package:mobile_assistant/core/services/inference_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:background_downloader/background_downloader.dart';
 
 part 'settings_provider.g.dart';
 
@@ -22,18 +19,18 @@ class SettingsState {
     this.inferenceStrategy = 'hybrid',
     this.isBusy = false,
     this.isDownloadingModel = false,
-    this.modelDownloadComplete = false,
     this.isLocalModelLoaded = false,
     this.downloadProgress = 0,
+    this.modelError,
   });
   final bool isAppLockEnabled;
   final ThemeMode themeMode;
   final String inferenceStrategy;
   final bool isBusy;
   final bool isDownloadingModel;
-  final bool modelDownloadComplete;
   final bool isLocalModelLoaded;
   final int downloadProgress;
+  final String? modelError;
 
   SettingsState copyWith({
     bool? isAppLockEnabled,
@@ -41,9 +38,10 @@ class SettingsState {
     String? inferenceStrategy,
     bool? isBusy,
     bool? isDownloadingModel,
-    bool? modelDownloadComplete,
     bool? isLocalModelLoaded,
     int? downloadProgress,
+    String? modelError,
+    bool clearModelError = false,
   }) {
     return SettingsState(
       isAppLockEnabled: isAppLockEnabled ?? this.isAppLockEnabled,
@@ -51,10 +49,9 @@ class SettingsState {
       inferenceStrategy: inferenceStrategy ?? this.inferenceStrategy,
       isBusy: isBusy ?? this.isBusy,
       isDownloadingModel: isDownloadingModel ?? this.isDownloadingModel,
-      modelDownloadComplete:
-          modelDownloadComplete ?? this.modelDownloadComplete,
       isLocalModelLoaded: isLocalModelLoaded ?? this.isLocalModelLoaded,
       downloadProgress: downloadProgress ?? this.downloadProgress,
+      modelError: clearModelError ? null : (modelError ?? this.modelError),
     );
   }
 }
@@ -92,6 +89,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       isAppLockEnabled: isAppLockEnabled,
       themeMode: mode,
       inferenceStrategy: strategyStr,
+      isLocalModelLoaded: svc.isLocalModelLoaded,
     );
   }
 
@@ -155,94 +153,19 @@ class SettingsNotifier extends _$SettingsNotifier {
     state = AsyncData(
       state.value!.copyWith(
         isDownloadingModel: true,
-        modelDownloadComplete: false,
         downloadProgress: 0,
+        clearModelError: true,
       ),
     );
     try {
-      try {
-        await FileDownloader().cancelAll();
-      } catch (_) {}
-
-      await Permission.notification.request();
-
-      // Check if file already exists in either location
-      final appDocs = await getApplicationDocumentsDirectory();
-      final legacyFilePath = p.join(appDocs.path, 'gemma-2b-it-cpu-int4.bin');
-
-      final task = DownloadTask(
-        url:
-            'https://github.com/usama-codes/gemma-model-hosting/releases/download/v1.0.0/gemma-2b-it-cpu-int4.bin',
-        filename: 'gemma-2b-it-cpu-int4.bin',
-        directory: 'models',
-        baseDirectory: BaseDirectory.applicationSupport,
-        updates: Updates.statusAndProgress,
-        retries: 5,
-        allowPause: true,
+      await InferenceService.instance.downloadAndInstallLocalModel(
+        onProgress: (percent) {
+          state = AsyncData(state.value!.copyWith(downloadProgress: percent));
+        },
       );
-
-      final newFilePath = await task.filePath();
-      String? finalFilePath;
-
-      if (File(legacyFilePath).existsSync()) {
-        finalFilePath = legacyFilePath;
-      } else if (File(newFilePath).existsSync()) {
-        finalFilePath = newFilePath;
-      }
-
-      if (finalFilePath == null) {
-        FileDownloader().configureNotification(
-          running: const TaskNotification(
-            'Downloading AI Model',
-            'Progress: {progress}%',
-          ),
-          complete: const TaskNotification(
-            'Model Downloaded',
-            'The AI model is ready.',
-          ),
-          error: const TaskNotification('Download Failed', 'Please try again.'),
-          paused: const TaskNotification(
-            'Download Paused',
-            'Waiting for connection...',
-          ),
-          progressBar: true,
-        );
-
-        bool downloadSuccess = false;
-        await FileDownloader().download(
-          task,
-          onProgress: (progress) {
-            if (progress > 0) {
-              state = AsyncData(
-                state.value!.copyWith(
-                  downloadProgress: (progress * 100).toInt(),
-                ),
-              );
-            }
-          },
-          onStatus: (status) {
-            if (status == TaskStatus.complete) {
-              downloadSuccess = true;
-            }
-          },
-        );
-
-        if (!downloadSuccess) {
-          throw Exception('Download did not complete successfully.');
-        }
-        finalFilePath = newFilePath;
-      }
-
-      await FlutterGemma.installModel(
-        modelType: ModelType.gemmaIt,
-        fileType: ModelFileType.binary,
-      ).fromFile(finalFilePath).install();
-
-      InferenceService.instance.isLocalModelLoaded = true;
       state = AsyncData(
         state.value!.copyWith(
           isDownloadingModel: false,
-          modelDownloadComplete: true,
           isLocalModelLoaded: true,
         ),
       );
@@ -250,7 +173,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       state = AsyncData(
         state.value!.copyWith(
           isDownloadingModel: false,
-          modelDownloadComplete: false,
+          modelError: 'Model download failed: $e',
         ),
       );
     }
@@ -258,11 +181,14 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   Future<void> deleteGemmaModel() async {
     try {
-      await FlutterGemma.uninstallModel('gemma-2b-it-cpu-int4');
-      InferenceService.instance.isLocalModelLoaded = false;
-      state = AsyncData(state.value!.copyWith(modelDownloadComplete: false));
+      await InferenceService.instance.deleteLocalModel();
+      state = AsyncData(
+        state.value!.copyWith(isLocalModelLoaded: false, clearModelError: true),
+      );
     } catch (e) {
-      // ignore
+      state = AsyncData(
+        state.value!.copyWith(modelError: 'Could not delete the model: $e'),
+      );
     }
   }
 

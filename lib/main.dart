@@ -13,6 +13,7 @@ import 'package:mobile_assistant/core/services/vault_service.dart';
 import 'package:mobile_assistant/core/theme/app_theme.dart';
 import 'package:mobile_assistant/features/chat/presentation/chat_screen.dart';
 import 'package:mobile_assistant/features/lock/presentation/screens/lock_screen.dart';
+import 'package:mobile_assistant/features/onboarding/presentation/onboarding_provider.dart';
 import 'package:mobile_assistant/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:mobile_assistant/features/settings/presentation/settings_screen.dart';
 import 'package:mobile_assistant/features/tasks/presentation/tasks_screen.dart';
@@ -39,17 +40,22 @@ Future<void> main() async {
   // }
 
   final objectBox = await ObjectBox.create();
+  final showOnboarding =
+      !InferenceService.instance.isLocalModelLoaded &&
+      !await isOnboardingDone();
 
   runApp(
     ProviderScope(
       overrides: [objectBoxProvider.overrideWithValue(objectBox)],
-      child: const MyApp(),
+      child: MyApp(showOnboarding: showOnboarding),
     ),
   );
 }
 
 class MyApp extends ConsumerStatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.showOnboarding = false});
+
+  final bool showOnboarding;
 
   // ignore: library_private_types_in_public_api
   static _MyAppState of(BuildContext context) =>
@@ -96,9 +102,9 @@ class _MyAppState extends ConsumerState<MyApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('ur')],
-      home: InferenceService.instance.isLocalModelLoaded
-          ? const LockScreen()
-          : const OnboardingScreen(),
+      home: widget.showOnboarding
+          ? const OnboardingScreen()
+          : const LockScreen(),
     );
   }
 }
