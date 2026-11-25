@@ -6,7 +6,10 @@ void main() {
   group('InferenceService.buildLocalMessages', () {
     test('puts the system instruction in the first user turn', () {
       final messages = InferenceService.buildLocalMessages(
-        chatHistory: [Content.text('hello'), Content.model([TextPart('hi!')])],
+        chatHistory: [
+          Content.text('hello'),
+          Content.model([TextPart('hi!')]),
+        ],
         prompt: Content.text('what time is it?'),
         systemInstruction: 'Be brief.',
         charBudget: 1000,

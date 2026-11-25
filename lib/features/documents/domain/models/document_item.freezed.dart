@@ -216,7 +216,7 @@ return $default(_that.id,_that.title,_that.folder,_that.tags,_that.originalSourc
 @JsonSerializable()
 
 class _DocumentItem implements DocumentItem {
-  const _DocumentItem({required this.id, required this.title, required this.folder, required final  List<String> tags, required this.originalSource, required this.documentType, required this.filePath, required this.createdAt}): _tags = tags;
+  const _DocumentItem({required this.id, required this.title, required this.folder, required  List<String> tags, required this.originalSource, required this.documentType, required this.filePath, required this.createdAt}): _tags = tags;
   factory _DocumentItem.fromJson(Map<String, dynamic> json) => _$DocumentItemFromJson(json);
 
 @override final  int id;

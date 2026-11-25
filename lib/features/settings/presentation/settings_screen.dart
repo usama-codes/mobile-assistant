@@ -151,80 +151,72 @@ class SettingsScreen extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _buildSettingCard(
-                            theme: theme,
-                            icon: Icons.memory,
-                            title: 'Local Model Status',
-                            subtitle: state.isDownloadingModel
-                                ? 'Downloading Gemma model (1.35 GB) - ${state.downloadProgress}%'
-                                : state.isLocalModelLoaded
-                                ? 'Gemma model loaded and ready for offline use.'
-                                : state.modelError ??
-                                      'Gemma model missing. Tap to download.',
-                            trailing: state.isDownloadingModel
-                                ? SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      value: state.downloadProgress > 0
-                                          ? state.downloadProgress / 100
-                                          : null,
+                      theme: theme,
+                      icon: Icons.memory,
+                      title: 'Local Model Status',
+                      subtitle: state.isDownloadingModel
+                          ? 'Downloading Gemma model (1.35 GB) - ${state.downloadProgress}%'
+                          : state.isLocalModelLoaded
+                          ? 'Gemma model loaded and ready for offline use.'
+                          : state.modelError ??
+                                'Gemma model missing. Tap to download.',
+                      trailing: state.isDownloadingModel
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                value: state.downloadProgress > 0
+                                    ? state.downloadProgress / 100
+                                    : null,
+                              ),
+                            )
+                          : state.isLocalModelLoaded
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Delete Model'),
+                                    content: const Text(
+                                      'Are you sure you want to delete the local Gemma model (1.35 GB)?',
                                     ),
-                                  )
-                                : state.isLocalModelLoaded
-                                ? IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Delete Model'),
-                                          content: const Text(
-                                            'Are you sure you want to delete the local Gemma model (1.35 GB)?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(ctx),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(ctx);
-                                                ref
-                                                    .read(
-                                                      settingsProvider.notifier,
-                                                    )
-                                                    .deleteGemmaModel();
-                                              },
-                                              child: const Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(ctx);
+                                          ref
+                                              .read(settingsProvider.notifier)
+                                              .deleteGemmaModel();
+                                        },
+                                        child: const Text(
+                                          'Delete',
+                                          style: TextStyle(color: Colors.red),
                                         ),
-                                      );
-                                    },
-                                  )
-                                : const Icon(
-                                    Icons.download,
-                                    color: AppTheme.accent,
+                                      ),
+                                    ],
                                   ),
-                            onTap: () {
-                              if (!state.isLocalModelLoaded &&
-                                  !state.isDownloadingModel) {
-                                ref
-                                    .read(settingsProvider.notifier)
-                                    .downloadGemmaModel();
-                              }
-                            },
-                          ),
+                                );
+                              },
+                            )
+                          : const Icon(Icons.download, color: AppTheme.accent),
+                      onTap: () {
+                        if (!state.isLocalModelLoaded &&
+                            !state.isDownloadingModel) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .downloadGemmaModel();
+                        }
+                      },
+                    ),
                   ),
 
                   _buildSectionHeader(

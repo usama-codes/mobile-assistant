@@ -399,11 +399,8 @@ class InferenceService {
     required String systemInstruction,
     required int charBudget,
   }) {
-    String textOf(Content c) => c.parts
-        .whereType<TextPart>()
-        .map((e) => e.text)
-        .join(' ')
-        .trim();
+    String textOf(Content c) =>
+        c.parts.whereType<TextPart>().map((e) => e.text).join(' ').trim();
 
     String clip(String text, int max) =>
         text.length > max ? text.substring(0, max) : text;
